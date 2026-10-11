@@ -1,0 +1,9 @@
+# Qhub Smart Marketing — runtime dependencies (tests: requirements-dev.txt)
+fastapi>=0.141.1,<0.142
+uvicorn[standard]>=0.54,<0.55
+sqlalchemy>=2.1.1,<2.2
+pydantic>=2.13,<3
+anthropic>=1.9,<2
+cryptography>=50.0.1,<51
+httpx>=0.28.1,<0.29
+python-multipart>=0.0.32,<0.1

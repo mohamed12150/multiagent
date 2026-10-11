@@ -1,0 +1,124 @@
+/* Qhub Smart Marketing — design tokens.
+   One accent (Qhub indigo). Teal is reserved for "live" signals only. Status colours are semantic.
+   Shape rule: cards 18px · controls 10px · chips/pills full. */
+
+:root {
+  --font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --r-card: 18px;
+  --r-ctl: 10px;
+  --r-pill: 999px;
+
+  --accent: #6b6bf8;
+  --accent-strong: #5656ea;
+  --on-accent: #ffffff;
+  --live: #46c2d2;
+
+  --ok: #1fae7a;
+  --warn: #e09a26;
+  --bad: #e4536a;
+
+  --c-tiktok: #2bd9d4;
+  --c-instagram: #e5487f;
+  --c-x: #9aa3b5;
+  --c-whatsapp: #25c264;
+  --c-linkedin: #3d8ff0;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 140ms;
+  --t-med: 260ms;
+
+  --side-w: 244px;
+  --top-h: 64px;
+}
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f2f4f9;
+  --bg-2: #e9ecf4;
+  --surface: #ffffff;
+  --surface-2: #f6f7fb;
+  --surface-3: #eef0f6;
+  --line: rgba(24, 33, 54, 0.08);
+  --line-2: rgba(24, 33, 54, 0.15);
+  --text: #141b2b;
+  --text-2: #4a5469;
+  --text-3: #7a849a;
+  --accent-soft: rgba(107, 107, 248, 0.11);
+  --accent-text: #4b4bd8;
+  --live-soft: rgba(70, 194, 210, 0.14);
+  --ok-soft: rgba(31, 174, 122, 0.12);
+  --warn-soft: rgba(224, 154, 38, 0.14);
+  --bad-soft: rgba(228, 83, 106, 0.12);
+  --ok-text: #0f7c55;
+  --warn-text: #8d5a05;
+  --bad-text: #b52a42;
+  --shadow-1: 0 1px 2px rgba(24, 33, 54, 0.05), 0 4px 14px rgba(24, 33, 54, 0.05);
+  --shadow-2: 0 10px 40px rgba(24, 33, 54, 0.12);
+  --overlay: rgba(14, 20, 34, 0.38);
+  --map-bg: radial-gradient(120% 90% at 50% 45%, #ffffff 0%, #eef1f9 60%, #e6eaf5 100%);
+  --map-line: rgba(73, 86, 120, 0.16);
+  --map-orbit: rgba(73, 86, 120, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #090e1a;
+    --bg-2: #0c1222;
+    --surface: #10182b;
+    --surface-2: #141e34;
+    --surface-3: #1a2540;
+    --line: rgba(206, 220, 255, 0.07);
+    --line-2: rgba(206, 220, 255, 0.13);
+    --text: #e7ebf5;
+    --text-2: #a3adc3;
+    --text-3: #6d7891;
+    --accent-soft: rgba(107, 107, 248, 0.16);
+    --accent-text: #a5a5ff;
+    --live-soft: rgba(70, 194, 210, 0.15);
+    --ok-soft: rgba(31, 174, 122, 0.16);
+    --warn-soft: rgba(224, 154, 38, 0.16);
+    --bad-soft: rgba(228, 83, 106, 0.16);
+    --ok-text: #5fd8a6;
+    --warn-text: #f2c06c;
+    --bad-text: #ff8fa1;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 18px 60px rgba(0, 0, 0, 0.5);
+    --overlay: rgba(3, 6, 14, 0.6);
+    --map-bg: radial-gradient(120% 90% at 50% 45%, #121c33 0%, #0c1324 55%, #090e1a 100%);
+    --map-line: rgba(150, 170, 220, 0.16);
+    --map-orbit: rgba(150, 170, 220, 0.1);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #090e1a;
+  --bg-2: #0c1222;
+  --surface: #10182b;
+  --surface-2: #141e34;
+  --surface-3: #1a2540;
+  --line: rgba(206, 220, 255, 0.07);
+  --line-2: rgba(206, 220, 255, 0.13);
+  --text: #e7ebf5;
+  --text-2: #a3adc3;
+  --text-3: #6d7891;
+  --accent-soft: rgba(107, 107, 248, 0.16);
+  --accent-text: #a5a5ff;
+  --live-soft: rgba(70, 194, 210, 0.15);
+  --ok-soft: rgba(31, 174, 122, 0.16);
+  --warn-soft: rgba(224, 154, 38, 0.16);
+  --bad-soft: rgba(228, 83, 106, 0.16);
+  --ok-text: #5fd8a6;
+  --warn-text: #f2c06c;
+  --bad-text: #ff8fa1;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 18px 60px rgba(0, 0, 0, 0.5);
+  --overlay: rgba(3, 6, 14, 0.6);
+  --map-bg: radial-gradient(120% 90% at 50% 45%, #121c33 0%, #0c1324 55%, #090e1a 100%);
+  --map-line: rgba(150, 170, 220, 0.16);
+  --map-orbit: rgba(150, 170, 220, 0.1);
+}

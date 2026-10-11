@@ -1,0 +1,27 @@
+/* مكتب الاعتماد */
+.ap-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .ap-grid { grid-template-columns: minmax(0, 1fr); } }
+.ap-card { display: flex; flex-direction: column; overflow: hidden; transition: opacity var(--t-med) var(--ease), transform var(--t-med) var(--ease); }
+.ap-card.leaving { opacity: 0; transform: translateY(-6px) scale(0.99); }
+.ap-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.ap-head .mark.sm { width: 22px; height: 22px; border-radius: 7px; }
+.ap-head .row .mark { width: 20px; height: 20px; border-radius: 6px; }
+.ap-body { padding: 16px 18px; }
+.ap-foot { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 18px 16px; border-top: 1px solid var(--line); background: var(--surface-2); }
+.ap-note { padding: 0 18px 14px; }
+.ap-post { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; }
+@media (max-width: 640px) { .ap-post { grid-template-columns: minmax(0, 1fr); } }
+.ap-post:not(:has(.ap-media)) { grid-template-columns: minmax(0, 1fr); }
+.ap-media { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); align-content: start; }
+.ap-media img, .ap-media video { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; background: var(--surface-3); }
+.ap-media:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+.ap-script summary { cursor: pointer; font-size: 13px; color: var(--accent-text); }
+.ap-asset { display: flex; gap: 16px; align-items: center; }
+.ap-asset img { width: 132px; aspect-ratio: 1; object-fit: cover; border-radius: 14px; background: var(--surface-3); }
+.ap-bubble { padding: 10px 14px; border-radius: 14px; background: var(--surface-2); }
+.ap-bubble.in { border-start-start-radius: 4px; }
+.ap-bubble.out { background: var(--accent-soft); border-start-end-radius: 4px; }
+.ap-bubble .textarea { margin-top: 6px; background: var(--surface); min-height: 80px; }
+.ap-limit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ap-from, .ap-to { font-size: 28px; font-weight: 600; padding: 6px 14px; border-radius: 12px; background: var(--surface-2); }
+.ap-to { background: var(--accent-soft); color: var(--accent-text); }
