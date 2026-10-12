@@ -162,8 +162,8 @@ function AgentForm({ agent, summary, meta, onSaved }) {
   const initial = useMemo(() => pick(agent), [agent]);
   const f = useForm(initial);
   const d = f.draft;
-  const editable = can('manager');
-  const owner = can('owner'); // the server accepts permission changes from the owner only
+  const editable = can('agents');
+  const owner = can('autonomy'); // the server accepts permission changes from the owner only
   const catalog = meta.permissions || agent.permission_catalog || {};
   const models = meta.models || [];
   const setRoutine = (name, patch) => {
@@ -253,7 +253,7 @@ export default function AgentsTab({ query }) {
   const onSaved = (a) => net.setData((n) => n && ({ ...n, agents: n.agents.map((x) => (x.id === a.id ? { ...x, ...a } : x)) }));
   const ready = agents && meta.data;
   return html`<${Head} title="الوكلاء" text="اضبط كل وكيل على حدة: النموذج الذي يفكر به، وعمق تفكيره، وتعليماتك له، ومواعيد عمله، وما يفعله وحده." />
-    ${!can('manager') && html`<${ReadOnly} />`}
+    ${!can('agents') && html`<${ReadOnly} cap="agents" />`}
     ${net.error && !agents ? html`<${ErrorBox} error=${net.error} retry=${net.reload} />` : html`<div class="st-agents">
       <${AgentList} agents=${agents} current=${id} onPick=${pickAgent} />
       ${ready ? html`<${AgentEditor} key=${id} id=${id} summary=${agents.find((a) => a.id === id)} meta=${meta.data} onSaved=${onSaved} />`

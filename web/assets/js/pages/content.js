@@ -54,7 +54,7 @@ function BoardView({ channel, q, tick, onOpen, onAsk, onWrite }) {
     if (!rows.length && !filtered) {
       return html`<div class="card"><${Empty} icon="kanban" title="لا يوجد محتوى بعد"
         text="اطلب من صانع المحتوى منشورات لقنواتك، فيكتبها من تصاميمك المعتمدة ويرسلها لك للاعتماد. أو اكتب منشورًا بنفسك."
-        action=${can('editor') && html`<div class="row wrap gap-6 ct-empty-actions">
+        action=${can('content') && html`<div class="row wrap gap-6 ct-empty-actions">
           <${Button} variant="primary" icon="wand" onClick=${onAsk}>اطلب محتوى من صانع المحتوى</${Button}>
           <${Button} icon="edit" onClick=${onWrite}>منشور يدوي</${Button}></div>`} /></div>`;
     }
@@ -78,7 +78,7 @@ export default function ContentPage({ query }) {
   const [writing, setWriting] = useState(false);
   const refresh = () => setTick((t) => t + 1);
   const bump = useDebounced(refresh, LIVE_RELOAD_MS);
-  const editor = can('editor');
+  const editor = can('content');
 
   useLive('task', (d) => {
     const kind = d.task?.kind || '';

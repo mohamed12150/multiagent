@@ -4,13 +4,14 @@ Datetimes are stored as naive UTC (`utcnow()`); the API serialises them with a t
 """
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -59,10 +60,48 @@ def engine() -> Engine:
     return _engine
 
 
+# Columns added after the first release: (table, column, DDL). create_all() never alters an existing table.
+ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    ("users", "username", "VARCHAR(40)"),
+    ("users", "permissions", "JSON"),
+    ("campaigns", "paused_by", "VARCHAR(64) DEFAULT ''"),
+)
+
+
+def _username_from(email: str, taken: set[str]) -> str:
+    base = re.sub(r"[^a-z0-9._-]", "", email.split("@")[0].lower())[:28] or "user"
+    if not base[0].isalnum():
+        base = f"u{base}"
+    base = base.ljust(3, "0")
+    name, n = base, 2
+    while name in taken:
+        name, n = f"{base}{n}", n + 1
+    return name
+
+
+def _migrate(eng: Engine) -> None:
+    insp = inspect(eng)
+    with eng.begin() as conn:
+        for table, column, ddl in ADDED_COLUMNS:
+            if table in insp.get_table_names() and column not in {c["name"] for c in insp.get_columns(table)}:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_users_username ON users (username)"))
+        # Accounts created before usernames existed get one from their email, so they can sign in either way.
+        rows = conn.execute(text("SELECT id, email, username FROM users ORDER BY created_at")).all()
+        taken = {r.username for r in rows if r.username}
+        for r in rows:
+            if not r.username:
+                name = _username_from(r.email, taken)
+                taken.add(name)
+                conn.execute(text("UPDATE users SET username = :u WHERE id = :i"), {"u": name, "i": r.id})
+
+
 def init_db() -> None:
     from . import models  # noqa: F401  (register tables)
 
-    Base.metadata.create_all(engine())
+    eng = engine()
+    Base.metadata.create_all(eng)
+    _migrate(eng)
 
 
 @contextmanager

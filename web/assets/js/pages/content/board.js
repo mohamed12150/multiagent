@@ -59,7 +59,7 @@ export function PostCard({ post: p, onOpen, onApprove, approving }) {
 }
 
 export function Board({ posts, counts, filtered, onOpen, onApprove, approving }) {
-  const mgr = can('manager');
+  const mgr = can('approve');
   return html`<div class="ct-board">${COLUMNS.map((col) => {
     const rows = posts.filter((p) => col.statuses.includes(p.status)).sort(SORTS[col.by]);
     const total = col.statuses.reduce((sum, k) => sum + (counts?.[k] || 0), 0);

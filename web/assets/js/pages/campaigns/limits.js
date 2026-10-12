@@ -115,7 +115,7 @@ function RaisePanel({ draft, setRaise, editable, perm }) {
     </ul>
     ${perm && html`<div class="cp-perm"><span class="small">صلاحية «رفع الليمت» الآن</span>
       <${Badge} tone=${permValue === 'auto' ? 'ok' : permValue === 'off' ? 'bad' : 'warn'}>${F.PERM_VALUE[permValue] || 'حسب مستوى الاستقلالية'}</${Badge}>
-      ${can('manager') && html`<${Button} size="xs" variant="ghost" iconEnd="arrowLeft" onClick=${() => navigate('/settings/agents?agent=campaigns')}>غيّرها</${Button}>`}</div>`}
+      ${can('autonomy') && html`<${Button} size="xs" variant="ghost" iconEnd="arrowLeft" onClick=${() => navigate('/settings/agents?agent=campaigns')}>غيّرها</${Button}>`}</div>`}
     <div class=${cls('cp-raise-fields', !r.enabled && 'dim')}>
       <${LimitRow} lead=${mark('trend')} title="أقصى زيادة في المرة الواحدة" hint="نسبة من القيمة الحالية لكل طلب رفع">
         <${NumInput} value=${r.max_step_pct} min=${0} max=${200} suffix="٪" label="أقصى خطوة" disabled=${!editable} onChange=${(v) => setRaise('max_step_pct', v)} /></${LimitRow}>
@@ -136,7 +136,7 @@ function LimitsForm({ snap, aiToday, perm, onSaved }) {
   const [draft, setDraft] = useState(base);
   const [origin, setOrigin] = useState(baseKey);
   const [busy, setBusy] = useState(false);
-  const editable = can('owner');
+  const editable = can('autonomy');
   const dirty = JSON.stringify(draft) !== origin;
   useEffect(() => { if (!dirty) { setDraft(base); setOrigin(baseKey); } }, [baseKey]);
   const stale = dirty && origin !== baseKey;

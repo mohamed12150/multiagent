@@ -10,9 +10,11 @@ import {
 import { Icon, Button, Badge, StatusBadge, Card, Stat, Meter, AgentMark, ChannelMark, Empty, Skeleton, SimTag, Toggle, Loader, useDebounced } from '../ui/core.js';
 import { Drawer, toast } from '../ui/overlays.js';
 import { OrbitMap, usePulses } from '../ui/orbit.js';
+import { Steering } from './network/steering.js';
 
 const SUGGESTIONS = [
   'اقترح حملة للجمعة البيضاء ترفع المبيعات',
+  'أوقف الحملة الأضعف وحوّل ميزانيتها للأقوى',
   'جهّز منشورات الأسبوع لإنستقرام وتيك توك',
   'حلّل المنافسين وقل لي وين نتفوق',
   'رد على كل الرسائل المعلقة',
@@ -40,7 +42,7 @@ function CommandDesk({ onSent }) {
     } catch (e) { toast.error(e); } finally { setBusy(false); }
   };
   const grow = (e) => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; };
-  if (!can('editor')) return null;
+  if (!can('command')) return null;
   return html`<div class="command">
     <div class="command-row">
       <textarea ref=${area} rows="1" value=${text} placeholder="أعطِ القائد أمرًا… مثل: جهّز حملة لعيد الفطر بميزانية 3000 ريال"
@@ -76,8 +78,8 @@ function AgentDrawer({ id, onClose }) {
           <${Badge} tone="accent" icon="cpu">${ag.model_label}</${Badge}><${Badge}>تفكير ${EFFORT[ag.effort] || ag.effort}</${Badge}></div>
       </div></div>
       ${ag.status_note && html`<div class="notice mt-8"><${Icon} name="activity" size="17" /><div class="grow">${ag.status_note}</div></div>`}
-      ${can('manager') && html`<div class="row between mt-16 well"><span>إيقاف مؤقت للوكيل</span><${Toggle} checked=${ag.paused} label="إيقاف مؤقت" onChange=${pause} /></div>`}
-      ${ag.runnable.length > 0 && can('editor') && html`<h3 class="mt-24">تشغيل الآن</h3><div class="row wrap mt-8 gap-6">${ag.runnable.map((r) => html`
+      ${can('agents') && html`<div class="row between mt-16 well"><span>إيقاف مؤقت للوكيل</span><${Toggle} checked=${ag.paused} label="إيقاف مؤقت" onChange=${pause} /></div>`}
+      ${ag.runnable.length > 0 && can('command') && html`<h3 class="mt-24">تشغيل الآن</h3><div class="row wrap mt-8 gap-6">${ag.runnable.map((r) => html`
         <${Button} size="sm" icon="play" loading=${busy === r.kind} onClick=${() => run(r.kind)}>${r.label}</${Button}>`)}</div>`}
       <h3 class="mt-24">الصلاحيات</h3>
       <div class="mt-8">${Object.entries(ag.permission_catalog).map(([k, meta]) => html`<div class="perm-row">
@@ -240,6 +242,7 @@ export default function NetworkPage() {
       </div>
       <div class="net-side">
         ${net ? html`<${Pulse} net=${net} />` : html`<${Card} title="نبض اليوم"><${Skeleton} lines=${5} h=${22} /></${Card}>`}
+        ${net && html`<${Steering} data=${net.steering} onRan=${() => st.reload(true)} />`}
         <${Feed} fire=${fire} />
       </div>
     </div>

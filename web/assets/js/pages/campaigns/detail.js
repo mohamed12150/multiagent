@@ -63,7 +63,7 @@ function Pace({ c, cap, onSaved }) {
   const [busy, setBusy] = useState(false);
   const serverKey = JSON.stringify(pick(c));
   useEffect(() => setF(pick(c)), [serverKey]);
-  const editable = can('manager') && !['completed', 'rejected'].includes(c.status);
+  const editable = can('campaigns') && !['completed', 'rejected'].includes(c.status);
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
   const errors = {};
   if (typeof cap === 'number' && f.daily_budget_cap > cap) errors.daily = `يتجاوز سقف الصرف اليومي العام (${F.money(cap)})`;
@@ -159,7 +159,7 @@ function DetailSkeleton() {
 
 export function CampaignDetail({ id }) {
   const st = useApi(`/campaigns/${encodeURIComponent(id)}`, [id]);
-  const lim = useApi(can('manager') ? '/limits' : null);
+  const lim = useApi(can('campaigns') ? '/limits' : null);
   const reload = useDebounced(() => st.reload(true), 800);
   useLive('task', (d) => {
     const t = d.task || {};

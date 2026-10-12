@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import events, security
+from .. import events, permissions
 from ..agents.content import FORMATS, file_for_review
 from ..agents.registry import CHANNEL_LABELS
 from ..agents.runtime import enqueue, task_dict
@@ -16,7 +16,7 @@ from ..db import utcnow
 from ..engine import approvals, clock, limits
 from ..models import CHANNELS, Approval, Asset, Campaign, Post, User
 from . import serial
-from .deps import ApiError, actor, ai_quota, editor, found, get_db, manager, ok, viewer
+from .deps import ApiError, actor, ai_quota, cap, found, get_db, ok, viewer
 
 router = APIRouter(prefix="/api/posts", tags=["content"])
 EDITABLE = ("draft", "review", "approved", "scheduled", "rejected", "failed", "idea")
@@ -104,7 +104,7 @@ def _validate(s: Session, body: PostIn) -> None:
 
 
 @router.post("")
-def create_post(body: PostIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def create_post(body: PostIn, user: User = Depends(cap("content")), s: Session = Depends(get_db, scope="function")) -> dict:
     _validate(s, body)
     p = Post(channel=body.channel, format=body.format, title=body.title, caption=body.caption, script=body.script,
              hashtags=body.hashtags, cta=body.cta, asset_ids=body.asset_ids, campaign_id=body.campaign_id or None,
@@ -127,7 +127,7 @@ class PostPatch(BaseModel):
 
 
 @router.patch("/{post_id}")
-def update_post(post_id: str, body: PostPatch, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def update_post(post_id: str, body: PostPatch, user: User = Depends(cap("content")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     if p.status not in EDITABLE:
         raise ApiError(409, "locked", "لا يمكن تعديل منشور قيد النشر أو منشور")
@@ -148,7 +148,7 @@ def update_post(post_id: str, body: PostPatch, user: User = Depends(editor), s: 
     p.version = (p.version or 1) + 1
     if p.status in ("review", "approved", "scheduled"):
         approvals.cancel_for(s, "post", p.id)  # an approval always covers the exact text and media that go out
-        if security.has_role(user, "manager") and p.status != "review":
+        if permissions.has(user, "approve") and p.status != "review":
             p.approved_by, p.approved_at = actor(user), utcnow()
         else:
             p.status, p.scheduled_at = "review", None
@@ -166,7 +166,7 @@ def _pending(s: Session, post_id: str) -> Approval | None:
 
 
 @router.post("/{post_id}/submit")
-def submit(post_id: str, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def submit(post_id: str, user: User = Depends(cap("content")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     if p.status not in ("draft", "rejected", "idea", "failed"):
         raise ApiError(409, "bad_state", "المنشور ليس مسودة")
@@ -178,7 +178,7 @@ def submit(post_id: str, user: User = Depends(editor), s: Session = Depends(get_
 
 
 @router.post("/{post_id}/approve")
-def approve(post_id: str, body: DecisionIn, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def approve(post_id: str, body: DecisionIn, user: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     a = _pending(s, post_id)
     if a is not None:
@@ -193,7 +193,7 @@ def approve(post_id: str, body: DecisionIn, user: User = Depends(manager), s: Se
 
 
 @router.post("/{post_id}/reject")
-def reject(post_id: str, body: DecisionIn, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def reject(post_id: str, body: DecisionIn, user: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     a = _pending(s, post_id)
     if a is not None:
@@ -216,7 +216,7 @@ class ScheduleIn(BaseModel):
 
 
 @router.post("/{post_id}/schedule")
-def schedule(post_id: str, body: ScheduleIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def schedule(post_id: str, body: ScheduleIn, user: User = Depends(cap("content")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     if p.status not in ("approved", "scheduled"):
         raise ApiError(409, "not_approved", "اعتمد المنشور أولًا ثم جدوله")
@@ -238,7 +238,7 @@ def schedule(post_id: str, body: ScheduleIn, user: User = Depends(editor), s: Se
 
 
 @router.post("/{post_id}/unschedule")
-def unschedule(post_id: str, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def unschedule(post_id: str, user: User = Depends(cap("content")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     if p.status != "scheduled":
         raise ApiError(409, "bad_state", "المنشور غير مجدول")
@@ -247,7 +247,7 @@ def unschedule(post_id: str, user: User = Depends(editor), s: Session = Depends(
 
 
 @router.post("/{post_id}/publish-now")
-def publish_now(post_id: str, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def publish_now(post_id: str, user: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     if p.status not in ("approved", "scheduled", "failed"):
         raise ApiError(409, "not_approved", "اعتمد المنشور أولًا")
@@ -258,7 +258,7 @@ def publish_now(post_id: str, user: User = Depends(manager), s: Session = Depend
 
 
 @router.delete("/{post_id}")
-def delete_post(post_id: str, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def delete_post(post_id: str, user: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     if p.status in ("publishing",):
         raise ApiError(409, "busy", "المنشور قيد النشر الآن")
@@ -275,7 +275,7 @@ class GenerateIn(BaseModel):
 
 
 @router.post("/generate")
-def generate(body: GenerateIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def generate(body: GenerateIn, user: User = Depends(cap("content")), s: Session = Depends(get_db, scope="function")) -> dict:
     if body.channel not in CHANNELS:
         raise ApiError(422, "bad_channel", "القناة غير معروفة")
     ai_quota(user)

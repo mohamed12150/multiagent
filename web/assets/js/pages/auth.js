@@ -13,7 +13,7 @@ const DEMO_AGENTS = [
 ].map(([id, name, status]) => ({ id, name, status, enabled: true }));
 
 export function Auth({ setup }) {
-  const [f, setF] = useState({ name: '', company: '', email: '', password: '' });
+  const [f, setF] = useState({ name: '', company: '', email: '', login: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
@@ -22,7 +22,9 @@ export function Auth({ setup }) {
     setBusy(true);
     setError('');
     try {
-      const user = await api.post(setup ? '/auth/setup' : '/auth/login', setup ? f : { email: f.email, password: f.password });
+      const body = setup ? { name: f.name, company: f.company, email: f.email, password: f.password }
+        : { login: f.login.trim(), password: f.password };
+      const user = await api.post(setup ? '/auth/setup' : '/auth/login', body);
       const st = await api.get('/auth/state');
       session.set({ user, company: st.company, setupNeeded: false });
     } catch (err) { setError(err.message); } finally { setBusy(false); }
@@ -35,7 +37,10 @@ export function Auth({ setup }) {
       <form onSubmit=${submit}>
         ${setup && html`<${Field} label="اسمك"><input class="input" required minlength="2" value=${f.name} onInput=${set('name')} autocomplete="name" /></${Field}>
           <${Field} label="اسم الشركة"><input class="input" required minlength="2" value=${f.company} onInput=${set('company')} autocomplete="organization" /></${Field}>`}
-        <${Field} label="البريد الإلكتروني"><input class="input ltr" type="email" required value=${f.email} onInput=${set('email')} autocomplete="email" /></${Field}>
+        ${setup
+          ? html`<${Field} label="البريد الإلكتروني"><input class="input ltr" type="email" required value=${f.email} onInput=${set('email')} autocomplete="email" /></${Field}>`
+          : html`<${Field} label="البريد أو اسم المستخدم"><input class="input ltr" required value=${f.login} onInput=${set('login')}
+              autocomplete="username" autocapitalize="none" spellcheck="false" /></${Field}>`}
         <${Field} label="كلمة المرور" help=${setup ? '10 أحرف على الأقل، أحرف وأرقام' : ''}>
           <input class="input ltr" type="password" required value=${f.password} onInput=${set('password')} autocomplete=${setup ? 'new-password' : 'current-password'} /></${Field}>
         ${error && html`<div class="notice bad" role="alert">${error}</div>`}

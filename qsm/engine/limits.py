@@ -171,14 +171,16 @@ def _apply(s: Session, key: str, channel: str | None, value: float, *, by: str, 
 
 
 def label(key: str, channel: str | None) -> str:
-    names = {"campaign.posts_per_day": "منشورات الحملة اليومية", "campaign.daily_budget_cap": "سقف الحملة اليومي","organic_posts_per_day": "منشورات اليوم بدون حملات", "campaign_posts_per_day": "منشورات الحملة اليومية",
+    names = {"campaign.posts_per_day": "منشورات الحملة اليومية", "campaign.daily_budget_cap": "سقف الحملة اليومي",
+             "organic_posts_per_day": "منشورات اليوم بدون حملات", "campaign_posts_per_day": "منشورات الحملة اليومية",
              "daily_ad_spend_cap": "سقف الصرف اليومي", "monthly_ad_spend_cap": "سقف الصرف الشهري"}
     base = names.get(key, key)
     return f"{base} — {channel}" if channel else base
 
 
 def request_raise(s: Session, *, key: str, value: float, by: str, reason: str,
-                  channel: str | None = None, campaign_id: str | None = None) -> LimitChange:
+                  channel: str | None = None, campaign_id: str | None = None,
+                  permission: str = "raise_limits") -> LimitChange:
     """An agent (or the owner) asks to change a limit. Owner/manager changes apply at once; the campaign manager
     applies its own raise only when `raise_limits` is auto, authority is enabled, and the new value respects both the
     step and the ceiling — otherwise the request goes to the approval desk."""
@@ -200,7 +202,7 @@ def request_raise(s: Session, *, key: str, value: float, by: str, reason: str,
         _apply(s, key, channel, value, by=by, campaign_id=campaign_id)
         change.status = "applied"
     else:
-        decision = policy.decide(s, by, "raise_limits")
+        decision = policy.decide(s, by, permission)
         auth = lim.raise_authority
         # From zero there is no step to measure: a frozen limit is the owner's decision to unfreeze.
         step_ok = old > 0 and (value - old) / old * 100 <= auth.max_step_pct

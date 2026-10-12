@@ -53,11 +53,11 @@ function GeneralForm({ initial, onSaved }) {
     }, 'حُفظت الإعدادات العامة');
   };
   const httpOnly = /^http:\/\//i.test(g.public_base_url.trim());
-  const owner = can('owner'); // timezone, public URL and send window are owner-only on the server; AI stays manager+
-  return html`<${SettingsForm} form=${f} onSubmit=${submit} canEdit=${can('manager')}>
+  const owner = can('notify'); // timezone, public URL and send window follow «notify» on the server; AI follows «settings»
+  return html`<${SettingsForm} form=${f} onSubmit=${submit} canEdit=${can('settings')}>
     <fieldset class="st-fieldset" disabled=${!owner}>
-    ${!owner && can('manager') && html`<div class="notice st-ro"><${Icon} name="lock" size="17" /><div class="grow">المنطقة والعملة والرابط
-      العام ونافذة الإرسال يغيّرها المالك فقط. إعدادات الذكاء الاصطناعي أدناه متاحة لك.</div></div>`}
+    ${!owner && can('settings') && html`<div class="notice st-ro"><${Icon} name="lock" size="17" /><div class="grow">المنطقة والعملة والرابط
+      العام ونافذة الإرسال تحتاج صلاحية «الإشعارات والإعدادات العامة». إعدادات الذكاء الاصطناعي أدناه متاحة لك.</div></div>`}
     <${Card} title="المنطقة والعملة" icon="globe">
       <div class="st-grid">
         <${SelectField} label="المنطقة الزمنية" options=${ZONES} value=${g.timezone} error=${f.errors.timezone}
@@ -132,7 +132,7 @@ export default function GeneralTab() {
   const initial = useMemo(() => st.data && ({ general: st.data.sections.general, ai: st.data.sections.ai }), [st.data]);
   const onSaved = (general, ai) => st.setData((d) => withSection('ai', ai)(withSection('general', general)(d)));
   return html`<${Head} title="عام والذكاء الاصطناعي" text="إعدادات تشغيل الشبكة: التوقيت والرابط العام ونافذة الإرسال، وكيف يستخدم الوكلاء Claude." />
-    ${!can('manager') && html`<${ReadOnly} />`}
+    ${!can('settings') && html`<${ReadOnly} cap="settings" />`}
     <${Loader} state=${st} skeleton=${html`<${Skel} />`}>${() => html`<${GeneralForm} initial=${initial} onSaved=${onSaved} />`}</${Loader}>
     <div class="mt-24"><${Usage} /></div>`;
 }

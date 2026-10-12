@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import connectors, db, events, security, settings, vault
+from .. import connectors, db, events, permissions, settings, vault
 from ..agents.registry import PERMISSIONS, PRESETS
 from ..ai import client as ai
 from ..ai.models import catalog as model_catalog
@@ -17,13 +17,14 @@ from ..connectors import catalog
 from ..connectors.base import ConnectorError
 from ..db import utcnow
 from ..engine import media, policy
-from ..models import ROLES, Connection, User
+from ..models import Connection, User
 from . import serial
-from .deps import ApiError, actor, found, get_db, manager, ok, owner, viewer
+from .deps import ApiError, actor, cap, found, get_db, ok, viewer
 
 router = APIRouter(prefix="/api", tags=["settings"])
-EDITABLE_SECTIONS = ("brand", "notify", "general", "ai")
-OWNER_SECTIONS = ("notify", "general")  # where reports go and which public URL links point at are trust anchors
+EDITABLE_SECTIONS = ("brand", "notify", "general", "ai", "goals")
+# Where reports go and which public URL links point at are trust anchors; goals steer القائد's own interventions.
+SECTION_CAP = {"notify": "notify", "general": "notify", "goals": "autonomy"}
 CREDENTIAL_ANCHORS = {"email": ("smtp_host", "smtp_port", "username")}
 
 
@@ -34,11 +35,13 @@ def get_settings(_: User = Depends(viewer), s: Session = Depends(get_db, scope="
 
 
 @router.put("/settings/{section}")
-def put_section(section: str, body: dict[str, Any], user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def put_section(section: str, body: dict[str, Any], user: User = Depends(viewer),
+                s: Session = Depends(get_db, scope="function")) -> dict:
     if section not in EDITABLE_SECTIONS:
         raise ApiError(404, "unknown_section", "قسم إعدادات غير معروف")
-    if section in OWNER_SECTIONS and not security.has_role(user, "owner"):
-        raise ApiError(403, "owner_only", "هذا القسم يغيّره المالك فقط")
+    need = SECTION_CAP.get(section, "settings")
+    if not permissions.has(user, need):
+        raise ApiError(403, "forbidden", f"لا تملك صلاحية «{permissions.CAPABILITIES[need]['label']}»")
     try:
         obj = settings.put(s, section, body, by=actor(user))
     except settings.SettingsError as exc:
@@ -52,7 +55,7 @@ class AutonomyIn(BaseModel):
 
 
 @router.post("/settings/autonomy")
-def set_autonomy(body: AutonomyIn, user: User = Depends(owner), s: Session = Depends(get_db, scope="function")) -> dict:
+def set_autonomy(body: AutonomyIn, user: User = Depends(cap("autonomy")), s: Session = Depends(get_db, scope="function")) -> dict:
     policy.apply_preset(s, body.level, by=actor(user))
     label = {"manual": "يدوي", "assisted": "شبه آلي", "autopilot": "طيار آلي"}[body.level]
     events.record(s, "autonomy", f"مستوى الاستقلالية ← {label}", actor=actor(user))
@@ -67,7 +70,7 @@ def _conn_out(s: Session, c: Connection) -> dict:
 
 
 @router.get("/connections")
-def list_connections(_: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def list_connections(_: User = Depends(cap("connections")), s: Session = Depends(get_db, scope="function")) -> dict:
     rows = {c.id: c for c in s.scalars(select(Connection)).all()}
     return ok([_conn_out(s, rows[p]) for p in catalog.ORDER if p in rows])
 
@@ -79,7 +82,7 @@ class ConnectionIn(BaseModel):
 
 
 @router.put("/connections/{provider}")
-def save_connection(provider: str, body: ConnectionIn, user: User = Depends(manager),
+def save_connection(provider: str, body: ConnectionIn, user: User = Depends(cap("connections")),
                     s: Session = Depends(get_db, scope="function")) -> dict:
     if provider not in catalog.PROVIDERS:
         raise ApiError(404, "unknown_provider", "خدمة غير معروفة")
@@ -116,7 +119,7 @@ def save_connection(provider: str, body: ConnectionIn, user: User = Depends(mana
 
 
 @router.post("/connections/{provider}/test")
-async def test_connection(provider: str, user: User = Depends(manager)) -> dict:
+async def test_connection(provider: str, user: User = Depends(cap("connections"))) -> dict:
     if provider not in catalog.PROVIDERS:
         raise ApiError(404, "unknown_provider", "خدمة غير معروفة")
     try:
@@ -144,7 +147,7 @@ async def test_connection(provider: str, user: User = Depends(manager)) -> dict:
 
 
 @router.delete("/connections/{provider}")
-def clear_connection(provider: str, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def clear_connection(provider: str, user: User = Depends(cap("connections")), s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Connection, provider), "الربط")
     vault.delete_prefix(s, provider)
     c.mode, c.status, c.config, c.account, c.last_error = "sandbox", "not_configured", catalog.defaults(provider), {}, ""
@@ -153,7 +156,7 @@ def clear_connection(provider: str, user: User = Depends(manager), s: Session = 
 
 
 @router.get("/webhooks")
-def webhooks(request: Request, _: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def webhooks(request: Request, _: User = Depends(cap("connections")), s: Session = Depends(get_db, scope="function")) -> dict:
     token = vault.get(s, "meta.verify_token")
     if not token:
         token = secrets.token_urlsafe(24)
@@ -161,60 +164,3 @@ def webhooks(request: Request, _: User = Depends(manager), s: Session = Depends(
     base = media.public_base(s) or str(request.base_url).rstrip("/")
     return ok({"meta_url": f"{base}/api/hooks/meta", "verify_token": token,
                "fields": ["messages", "comments", "mentions"]})
-
-
-# ---------------------------------------------------------------- users
-
-class UserIn(BaseModel):
-    email: str = Field(max_length=200)
-    name: str = Field(min_length=2, max_length=120)
-    role: str = "editor"
-    password: str = Field(max_length=200)
-
-
-@router.get("/users")
-def users(_: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
-    return ok([serial.user(u) for u in s.scalars(select(User).order_by(User.created_at)).all()])
-
-
-@router.post("/users")
-def add_user(body: UserIn, user: User = Depends(owner), s: Session = Depends(get_db, scope="function")) -> dict:
-    email = body.email.strip().lower()
-    if not security.EMAIL_RE.match(email):
-        raise ApiError(422, "bad_email", "البريد غير صحيح")
-    if body.role not in ROLES or body.role == "owner":
-        raise ApiError(422, "bad_role", "اختر دورًا: مدير، محرر، مشاهد")
-    if s.scalar(select(User.id).where(User.email == email)):
-        raise ApiError(409, "exists", "يوجد مستخدم بهذا البريد")
-    problem = security.password_problem(body.password)
-    if problem:
-        raise ApiError(422, "weak_password", problem)
-    u = User(email=email, name=body.name, role=body.role, password_hash=security.hash_password(body.password))
-    s.add(u)
-    s.flush()
-    events.record(s, "user.added", f"أُضيف المستخدم {u.name} ({u.role})", actor=actor(user))
-    return ok(serial.user(u))
-
-
-class UserPatch(BaseModel):
-    role: str | None = None
-    active: bool | None = None
-    name: str | None = Field(default=None, max_length=120)
-
-
-@router.patch("/users/{user_id}")
-def edit_user(user_id: str, body: UserPatch, user: User = Depends(owner), s: Session = Depends(get_db, scope="function")) -> dict:
-    u = found(s.get(User, user_id), "المستخدم")
-    if u.id == user.id and (body.role or body.active is False):
-        raise ApiError(409, "self", "لا يمكنك تغيير دورك أو تعطيل حسابك")
-    if body.role is not None:
-        if body.role not in ROLES or body.role == "owner":
-            raise ApiError(422, "bad_role", "دور غير صالح")
-        u.role = body.role
-    if body.active is not None:
-        u.active = body.active
-        if not body.active:
-            security.end_all_sessions(s, u.id)
-    if body.name is not None:
-        u.name = body.name
-    return ok(serial.user(u))

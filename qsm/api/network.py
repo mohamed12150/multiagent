@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import db, events, security, settings
-from ..agents import state
+from .. import db, events, permissions, security, settings
+from ..agents import state, steer
 from ..agents.registry import BY_ID, CHANNEL_LABELS, PERMISSIONS, VALUES
 from ..agents.runtime import enqueue, runtime, task_dict
 from ..ai import client as ai
@@ -23,11 +23,11 @@ from ..engine import approvals, clock, limits
 from ..engine.scheduler import TITLES
 from ..models import Agent, Connection, Event, Task, User
 from . import serial
-from .deps import ApiError, actor, ai_quota, editor, found, get_db, manager, ok, viewer
+from .deps import ApiError, actor, ai_quota, cap, found, get_db, ok, viewer
 
 router = APIRouter(prefix="/api", tags=["network"])
 HEARTBEAT_S = 15
-RUNNABLE = {"ceo": ("ceo.plan_day",), "campaigns": ("campaigns.propose", "campaigns.analyze_competitors",
+RUNNABLE = {"ceo": ("ceo.steer", "ceo.plan_day"), "campaigns": ("campaigns.propose", "campaigns.analyze_competitors",
                                                      "campaigns.optimize"),
             "coordinator": ("coordinator.distribute", "coordinator.daily_report"), "guardian": ("guardian.sweep",),
             "content": ()}
@@ -59,6 +59,7 @@ def network(_: User = Depends(viewer), s: Session = Depends(get_db, scope="funct
                  "conversations": state.conversations_between(s, today, today)},
         "limits": limits.snapshot(s),
         "pending_approvals": approvals.pending_count(s),
+        "steering": steer.overview(s),
         "autonomy": settings.get(s, "autonomy").level,
         "ai_live": ai.is_live(), "ai_cost_today": usage["cost_usd"],
         "connections": conns,
@@ -108,7 +109,7 @@ def _clean_routines(current: dict[str, Any], incoming: dict[str, dict[str, Any]]
 
 
 @router.patch("/agents/{agent_id}")
-def update_agent(agent_id: str, body: AgentPatch, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def update_agent(agent_id: str, body: AgentPatch, user: User = Depends(cap("agents")), s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Agent, agent_id), "الوكيل")
     spec = BY_ID[agent_id]
     changes: list[str] = []
@@ -126,8 +127,8 @@ def update_agent(agent_id: str, body: AgentPatch, user: User = Depends(manager),
         a.instructions = body.instructions.strip()
         changes.append("التعليمات الإضافية")
     if body.permissions is not None:
-        if not security.has_role(user, "owner"):
-            raise ApiError(403, "owner_only", "الصلاحيات يغيّرها المالك فقط")
+        if not permissions.has(user, "autonomy"):
+            raise ApiError(403, "forbidden", "لا تملك صلاحية «الاستقلالية والصلاحيات والليمت»")
         bad = [k for k, v in body.permissions.items() if k not in spec.permissions or v not in VALUES]
         if bad:
             raise ApiError(422, "bad_permission", f"صلاحية غير صالحة: {', '.join(bad)}")
@@ -156,7 +157,7 @@ class RunIn(BaseModel):
 
 
 @router.post("/agents/{agent_id}/run")
-def run_skill(agent_id: str, body: RunIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def run_skill(agent_id: str, body: RunIn, user: User = Depends(cap("command")), s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Agent, agent_id), "الوكيل")
     ai_quota(user)
     allowed = CHANNEL_RUNNABLE if a.tier == 2 else RUNNABLE.get(agent_id, ())
@@ -173,9 +174,10 @@ class CommandIn(BaseModel):
 
 
 @router.post("/command")
-def command(body: CommandIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def command(body: CommandIn, user: User = Depends(cap("command")), s: Session = Depends(get_db, scope="function")) -> dict:
     ai_quota(user)
-    t = enqueue(s, kind="ceo.command", title=body.text.strip()[:200], input={"text": body.text.strip()},
+    t = enqueue(s, kind="ceo.command", title=body.text.strip()[:200],
+                input={"text": body.text.strip(), "can_steer": permissions.has(user, "campaigns")},
                 created_by=actor(user), origin="command", priority=1)
     events.record(s, "command", f"أمر للقائد: {body.text.strip()[:160]}", actor=actor(user), ref_kind="task",
                   ref_id=t.id)
@@ -204,7 +206,7 @@ def task(task_id: str, _: User = Depends(viewer), s: Session = Depends(get_db, s
 
 
 @router.post("/tasks/{task_id}/cancel")
-def cancel(task_id: str, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def cancel(task_id: str, user: User = Depends(cap("command")), s: Session = Depends(get_db, scope="function")) -> dict:
     t = found(s.get(Task, task_id), "المهمة")
     if t.status not in ("queued", "waiting"):
         raise ApiError(409, "not_cancellable", "لا يمكن إلغاء مهمة قيد التنفيذ أو منتهية")
@@ -216,7 +218,7 @@ def cancel(task_id: str, user: User = Depends(editor), s: Session = Depends(get_
 
 
 @router.post("/tasks/{task_id}/retry")
-def retry(task_id: str, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def retry(task_id: str, user: User = Depends(cap("command")), s: Session = Depends(get_db, scope="function")) -> dict:
     t = found(s.get(Task, task_id), "المهمة")
     if t.status != "failed":
         raise ApiError(409, "not_failed", "المهمة ليست متعثرة")

@@ -115,14 +115,14 @@ function ReportsList() {
     <div class="page-head rp-head">
       <div class="grow"><h2>تقارير المنسّق اليومية</h2>
         <p>يكتب المنسّق كل مساء تقريرًا بالأرقام الدقيقة ويرسله لك على واتساب والبريد. افتح أي يوم لتقرأه كاملًا.</p></div>
-      ${can('editor') && html`<${Button} variant="primary" icon="file" loading=${busy} disabled=${!!generating} onClick=${generate}>أصدر تقرير اليوم الآن</${Button}>`}
+      ${can('reports') && html`<${Button} variant="primary" icon="file" loading=${busy} disabled=${!!generating} onClick=${generate}>أصدر تقرير اليوم الآن</${Button}>`}
     </div>
     <${Loader} state=${st} skeleton=${html`<${ListSkeleton} />`}>${(rows) => (rows.length || generating ? html`
       <${Trend} rows=${rows} />
       <${Timeline} rows=${rows} generating=${generating} />`
       : html`<div class="card"><${Empty} icon="chart" title="لا توجد تقارير بعد"
           text="يصدر المنسّق تقرير الإنجاز كل مساء تلقائيًا ويرسله لك على واتساب والبريد. ويمكنك إصدار تقرير اليوم الآن لترى أرقامك حتى هذه اللحظة."
-          action=${can('editor') && html`<${Button} variant="primary" icon="file" loading=${busy} onClick=${generate}>أصدر تقرير اليوم الآن</${Button}>`} /></div>`)}
+          action=${can('reports') && html`<${Button} variant="primary" icon="file" loading=${busy} onClick=${generate}>أصدر تقرير اليوم الآن</${Button}>`} /></div>`)}
     </${Loader}>`;
 }
 

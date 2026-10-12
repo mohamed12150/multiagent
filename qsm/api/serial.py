@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .. import permissions
 from ..agents.registry import BY_ID, CHANNEL_LABELS, PERMISSIONS
 from ..agents.state import engagement, rate
 from ..ai.models import MODELS
@@ -28,7 +29,9 @@ from ..models import (
 
 
 def user(u: User) -> dict[str, Any]:
-    return {"id": u.id, "email": u.email, "name": u.name, "role": u.role, "active": u.active,
+    return {"id": u.id, "email": u.email, "username": u.username or "", "name": u.name, "role": u.role,
+            "active": u.active, "caps": sorted(permissions.effective(u)),
+            "custom_permissions": u.permissions is not None and u.role != "owner",
             "last_login_at": iso(u.last_login_at), "created_at": iso(u.created_at)}
 
 

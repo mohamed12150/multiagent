@@ -67,7 +67,7 @@ function Hero({ data, openCount, needsOwner, sweeping, onSweep }) {
         <span><${Icon} name="search" size="14" />${F.num(last.findings)} ملاحظة</span>
         <span><${Icon} name="wand" size="14" />أصلح ${F.num(last.fixed)}</span>` : html`<span>لم يُجرِ الحارس فحصًا شاملًا بعد</span>`}</div>
     </div>
-    ${can('editor') && html`<${Button} variant="primary" icon="refresh" loading=${sweeping} onClick=${onSweep}>${sweeping ? 'يفحص الآن' : 'افحص الآن'}</${Button}>`}
+    ${can('command') && html`<${Button} variant="primary" icon="refresh" loading=${sweeping} onClick=${onSweep}>${sweeping ? 'يفحص الآن' : 'افحص الآن'}</${Button}>`}
   </section>`;
 }
 
@@ -101,7 +101,7 @@ function OwnerAction({ inc }) {
   const hint = OWNER_HINT[inc.check] || DEFAULT_HINT;
   return html`<div class="notice bad gd-owner"><${Icon} name="hand" size="18" />
     <div class="grow"><b>ما المطلوب منك</b>${hint.text}
-      ${hint.href && can('manager') && html` <${Link} href=${hint.href} class="strong">${hint.cta}</${Link}>`}</div></div>`;
+      ${hint.href && can(hint.cap || 'connections') && html` <${Link} href=${hint.href} class="strong">${hint.cta}</${Link}>`}</div></div>`;
 }
 
 function Incident({ inc, labels, onChanged }) {
@@ -136,7 +136,7 @@ function Incident({ inc, labels, onChanged }) {
       <span><${Icon} name="clock" size="13" />رُصدت ${F.dateTime(inc.created_at)}</span>
       ${inc.resolved_at && html`<span><${Icon} name="checkCircle" size="13" />حُلّت ${F.dateTime(inc.resolved_at)}</span>`}
     </div>
-    ${can('manager') && (canFix || (open && inc.status !== 'fixing')) && html`<div class="row wrap gap-6 mt-12">
+    ${can('agents') && (canFix || (open && inc.status !== 'fixing')) && html`<div class="row wrap gap-6 mt-12">
       ${canFix && html`<${Button} size="sm" variant="primary" icon="wand" loading=${busy === 'fix'} disabled=${!!busy} onClick=${fix}>نفّذ الإصلاح</${Button}>`}
       ${open && inc.status !== 'fixing' && html`<${Button} size="sm" variant="ghost" icon="eyeOff" loading=${busy === 'ignore'} disabled=${!!busy} onClick=${ignore}>تجاهل</${Button}>`}
     </div>`}
@@ -186,7 +186,7 @@ function Usage() {
               <span class="tiny faint">${F.num(r.calls)} استدعاء</span></div></div>`)}</div>`
           : html`<p class="small faint mt-16">لم يستخدم الوكلاء الذكاء الاصطناعي في هذه الفترة.</p>`}
         ${!u.live && html`<div class="notice warn mt-16"><${Icon} name="key" size="17" /><div class="grow">الوكلاء يعملون الآن بعقول محاكاة.
-          ${can('manager') ? html` <${Link} href="/settings/connections" class="strong">أضف مفتاح Claude</${Link}> لتشغيل العقول الحقيقية.` : ' يضيف المدير مفتاح Claude من الإعدادات.'}</div></div>`}`;
+          ${can('connections') ? html` <${Link} href="/settings/connections" class="strong">أضف مفتاح Claude</${Link}> لتشغيل العقول الحقيقية.` : ' يضيفه من يملك صلاحية «الربط والمفاتيح».'}</div></div>`}`;
     }}</${Loader}>
   </${Card}>`;
 }
@@ -196,7 +196,7 @@ function Playbooks({ labels }) {
     <p class="small muted">لكل خلل معروف خطة إصلاح آمنة، ينفذها الحارس ثم يخبرك بما فعل.</p>
     <div class="gd-plays mt-12">${Object.entries(labels).map(([k, v]) => html`<span class="gd-play" key=${k}><${Icon} name="check" size="13" />${v}</span>`)}</div>
     <div class="notice mt-16"><${Icon} name="sliders" size="17" /><div class="grow">صلاحية «الإصلاح التلقائي» في الإعدادات › الصلاحيات تقرر طريقة عمله: يصلح وحده فورًا، أو يطلب اعتمادك أولًا من مكتب الاعتماد، أو يكتفي بإبلاغك.
-      ${can('manager') && html` <${Link} href="/settings/agents?agent=guardian" class="strong">صلاحيات الحارس</${Link}>`}</div></div>
+      ${can('agents') && html` <${Link} href="/settings/agents?agent=guardian" class="strong">صلاحيات الحارس</${Link}>`}</div></div>
     <p class="tiny faint mt-12">ما لا تحله خطة آلية، مثل رمز وصول ملغى، يُعلَّم «تحتاج تدخلك» ويصلك تنبيه عاجل مرة واحدة.</p>
   </${Card}>`;
 }

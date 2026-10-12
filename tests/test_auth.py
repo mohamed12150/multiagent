@@ -88,7 +88,7 @@ def test_login_succeeds(owner: TestClient) -> None:
 
 
 def test_roles_gate_writes(owner: TestClient) -> None:
-    r = owner.post("/api/users", json={"email": "viewer@example.test", "name": "مشاهد", "role": "viewer",
+    r = owner.post("/api/users", json={"email": "viewer@example.test", "username": "viewer", "name": "مشاهد", "role": "viewer",
                                        "password": "Viewer-pass-2026"}, headers=H)
     assert r.status_code == 200
     owner.post("/api/auth/logout", headers=H)

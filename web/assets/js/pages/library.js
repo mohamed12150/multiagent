@@ -34,11 +34,11 @@ function RuleNotice({ pending, onReview }) {
   return html`<div class="notice lb-rule">
     <${Icon} name="shield" size="18" />
     <div class="grow"><b>الوكلاء يستخدمون الملفات المعتمدة فقط</b>
-      لا يرى صانع المحتوى أي ملف قبل «اعتماد التصميم» من أحد المديرين، والملفات الجديدة تصل بحالة «بانتظار الاعتماد».
+      لا يرى صانع المحتوى أي ملف قبل «اعتماد التصميم» ممن يملك صلاحية الاعتماد، والملفات الجديدة تصل بحالة «بانتظار الاعتماد».
       <ol class="lb-flow">
         <li><${Icon} name="upload" size="14" />يرفع المصمم التصميم النهائي</li>
         <li><${Icon} name="sparkles" size="14" />يصفه صانع المحتوى ويضع وسومه</li>
-        <li><${Icon} name="checkCircle" size="14" />يعتمده المدير</li>
+        <li><${Icon} name="checkCircle" size="14" />يعتمده صاحب صلاحية الاعتماد</li>
         <li><${Icon} name="wand" size="14" />يُستخدم في المنشورات</li>
       </ol>
     </div>
@@ -69,8 +69,8 @@ export default function LibraryPage({ query }) {
   const [reviewing, setReviewing] = useState({});
   const [shown, setShown] = useState(null);
   const picker = useRef(null);
-  const editor = can('editor');
-  const mgr = can('manager');
+  const editor = can('library');
+  const mgr = can('approve');
   const upFolder = folder || DEFAULT_FOLDER;
 
   const reload = useDebounced(() => st.reload(true), LIVE_RELOAD_MS);

@@ -5,7 +5,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from .. import events, settings
@@ -17,7 +17,8 @@ log = logging.getLogger("qsm.approvals")
 Resolver = Callable[[Session, Approval, bool], None]
 _resolvers: dict[str, Resolver] = {}
 KIND_LABELS = {"post": "محتوى للنشر", "reply": "رد على عميل", "limit": "رفع ليمت", "campaign": "حملة",
-               "broadcast": "رسالة جماعية", "fix": "إصلاح", "asset": "تصميم في المكتبة", "spend": "صرف ميزانية"}
+               "broadcast": "رسالة جماعية", "fix": "إصلاح", "asset": "تصميم في المكتبة", "spend": "صرف ميزانية",
+               "plan": "خطة تدخل القائد"}
 
 
 class ApprovalError(ValueError):
@@ -57,8 +58,12 @@ def decide(s: Session, approval_id: str, approve: bool, *, by: str, note: str = 
         raise ApprovalError("الطلب غير موجود")
     if a.status != "pending":
         raise ApprovalError("تم البت في هذا الطلب مسبقًا")
-    a.status = "approved" if approve else "rejected"
-    a.decided_by, a.note, a.decided_at = by, note[:2000], utcnow()
+    status = "approved" if approve else "rejected"
+    claimed = s.execute(update(Approval).where(Approval.id == approval_id, Approval.status == "pending")
+                        .values(status=status, decided_by=by, note=note[:2000], decided_at=utcnow()))
+    if claimed.rowcount != 1:  # someone decided it between our read and this write
+        raise ApprovalError("تم البت في هذا الطلب مسبقًا")
+    s.refresh(a)
     fn = _resolvers.get(a.kind)
     if fn is not None:
         fn(s, a, approve)

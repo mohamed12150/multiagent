@@ -30,7 +30,7 @@ function PendingReply({ m, approval, onDecided }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(m.text);
   const [busy, setBusy] = useState('');
-  if (!can('manager')) return html`<p class="tiny faint ib-pnote">ينتظر هذا الرد اعتماد المدير قبل إرساله.</p>`;
+  if (!can('approve')) return html`<p class="tiny faint ib-pnote">ينتظر هذا الرد الاعتماد قبل إرساله.</p>`;
   if (!approval) {
     return html`<p class="tiny faint ib-pnote">طلب الاعتماد في <${Link} href="/approvals?kind=reply">مكتب الاعتماد</${Link}>.</p>`;
   }
@@ -72,7 +72,7 @@ function Bubble({ m, contact, meId, approval, onDecided }) {
   const ours = m.direction === 'out';
   const st = ours ? OUT_STATUS[m.status] : null;
   const meta = m.meta || {};
-  const pendingLabel = m.status === 'pending' && !can('manager') ? 'بانتظار الاعتماد' : null;
+  const pendingLabel = m.status === 'pending' && !can('approve') ? 'بانتظار الاعتماد' : null;
   return html`<div class=${cls('ib-msg', ours ? 'out' : 'in', ours && `st-${m.status}`)}>
     <span class="ib-author">${authorLabel(m.author, contact, meId)}</span>
     <div class="ib-bubble"><p class="pre">${m.text}</p></div>
@@ -108,7 +108,7 @@ function Messages({ conv, approvals, meId, onDecided }) {
 function Composer({ conv, hasPending, onSent }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState('');
-  if (!can('editor')) return html`<div class="ib-composer ro small faint">صلاحيتك للمشاهدة فقط، فلا يمكنك الرد من حسابك.</div>`;
+  if (!can('inbox')) return html`<div class="ib-composer ro small faint">صلاحيتك للمشاهدة فقط، فلا يمكنك الرد من حسابك.</div>`;
   const send = async () => {
     const body = text.trim();
     if (!body || busy) return;
@@ -150,7 +150,7 @@ function Head({ conv, onBack, onContact, onStatus, busy }) {
       </div>
     </div>
     <div class="ib-tactions">
-      ${can('editor') && actionsFor(conv.status).map((k) => { const a = STATUS_ACTIONS[k]; return html`<${Button} key=${k} size="sm"
+      ${can('inbox') && actionsFor(conv.status).map((k) => { const a = STATUS_ACTIONS[k]; return html`<${Button} key=${k} size="sm"
         variant=${k === 'escalate' ? '' : 'ghost'} icon=${a.icon} title=${a.label} loading=${busy === k} disabled=${!!busy}
         onClick=${() => onStatus(k)}><span class="ib-btxt">${a.label}</span></${Button}>`; })}
       <button type="button" class="icon-btn ib-info" aria-label="بيانات العميل" title="بيانات العميل" onClick=${onContact}><${Icon} name="user" size="18" /></button>

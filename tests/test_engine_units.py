@@ -288,7 +288,7 @@ def test_public_base_url_must_be_an_origin(owner: TestClient) -> None:
 
 
 def test_manager_cannot_touch_owner_controls(owner: TestClient) -> None:
-    owner.post("/api/users", json={"email": "mgr@example.test", "name": "مدير", "role": "manager",
+    owner.post("/api/users", json={"email": "mgr@example.test", "username": "mgr", "name": "مدير", "role": "manager",
                                    "password": "Manager-pass-2026"}, headers=H)
     owner.post("/api/auth/logout", headers=H)
     owner.post("/api/auth/login", json={"email": "mgr@example.test", "password": "Manager-pass-2026"}, headers=H)

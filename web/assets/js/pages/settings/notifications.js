@@ -61,7 +61,7 @@ function NotifyForm({ initial, onSaved }) {
     }, 'حُفظت إعدادات الإشعارات والتقارير');
   };
   const warnings = gaps(d);
-  return html`<${SettingsForm} form=${f} onSubmit=${submit} canEdit=${can('owner')}>
+  return html`<${SettingsForm} form=${f} onSubmit=${submit} canEdit=${can('notify')}>
     <${Card} title="المستلم" icon="user">
       <div class="st-grid">
         <${TextField} label="اسم المالك" maxLength=${120} ...${f.bind('owner_name')} error=${f.errors.owner_name}
@@ -133,7 +133,7 @@ export default function NotificationsTab() {
   const initial = useMemo(() => st.data?.sections?.notify, [st.data]);
   return html`<${Head} title="الإشعارات والتقارير"
     text="اختر من يستلم تقرير الإنجاز والتنبيهات، وعبر أي قناة، وفي أي وقت. يرسلها المنسّق والحارس نيابة عن الشبكة." />
-    ${!can('owner') && html`<${ReadOnly} who="للمالك" />`}
+    ${!can('notify') && html`<${ReadOnly} cap="notify" />`}
     <${Loader} state=${st} skeleton=${html`<${Skel} />`}>${() => html`<${NotifyForm} initial=${initial}
       onSaved=${(obj) => st.setData(withSection('notify', obj))} />`}</${Loader}>`;
 }

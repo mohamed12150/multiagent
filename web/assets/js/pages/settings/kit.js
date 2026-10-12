@@ -3,6 +3,7 @@
 import { html, cls, useState, useEffect, useRef, useMemo, useCallback, useId } from '../../lib/h.js';
 import { api } from '../../lib/api.js';
 import { navigate, setLeaveGuard } from '../../lib/router.js';
+import { capLabel } from '../../lib/store.js';
 import { num, CHANNELS, PERM_VALUE } from '../../lib/format.js';
 import { Icon, Button, Toggle } from '../../ui/core.js';
 import { toast, confirm } from '../../ui/overlays.js';
@@ -17,9 +18,9 @@ export const AGENT_GROUPS = [
 export const AGENT_ORDER = AGENT_GROUPS.flatMap((g) => g.ids);
 export const ROLE = {
   owner: { label: 'المالك', text: 'كل الصلاحيات، ومنها إدارة الفريق ومستوى الاستقلالية.' },
-  manager: { label: 'مدير', text: 'يعتمد المحتوى والحملات، ويدير الليمت والربط.' },
-  editor: { label: 'محرر', text: 'يطلب المحتوى من الوكلاء ويحرره.' },
-  viewer: { label: 'مشاهد', text: 'اطلاع فقط على الشبكة والتقارير.' },
+  manager: { label: 'مدير', text: 'يعتمد ويدير الحملات والوكلاء والربط، دون صلاحيات المالك الثلاث.' },
+  editor: { label: 'محرر', text: 'يأمر القائد، يكتب المحتوى ويرفع التصاميم، يدير الحملات ويرد على العملاء.' },
+  viewer: { label: 'مشاهد', text: 'اطلاع فقط على الشبكة والتقارير، ما لم تمنحه صلاحيات محددة.' },
 };
 export const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -210,9 +211,9 @@ export function Head({ title, text, actions }) {
     ${actions && html`<div class="row wrap gap-6">${actions}</div>`}</header>`;
 }
 
-export function ReadOnly({ who = 'للمدير والمالك' }) {
+export function ReadOnly({ cap }) {
   return html`<div class="notice st-ro"><${Icon} name="lock" size="17" /><div class="grow">تعرض هذه الصفحة الإعدادات الحالية للاطلاع.
-    التعديل متاح ${who} فقط.</div></div>`;
+    التعديل لمن يملك صلاحية «${capLabel(cap)}».</div></div>`;
 }
 
 export function SaveBar({ form, label = 'حفظ التغييرات', note }) {

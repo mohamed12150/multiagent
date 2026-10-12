@@ -1,7 +1,7 @@
 // الإعدادات: a settings sub-navigation (vertical on desktop, scrolling tabs on phones) and one module per tab
 // under pages/settings/. Routes /settings and /settings/:tab land here; the default tab is the brand brief.
 import { html, cls, useEffect, useRef } from '../lib/h.js';
-import { can } from '../lib/store.js';
+import { can, capLabel } from '../lib/store.js';
 import { Icon, Button, Empty } from '../ui/core.js';
 import { go } from './settings/kit.js';
 import BrandTab from './settings/brand.js';
@@ -11,16 +11,18 @@ import ConnectionsTab from './settings/connections.js';
 import NotificationsTab from './settings/notifications.js';
 import GeneralTab from './settings/general.js';
 import UsersTab from './settings/users.js';
+import GoalsTab from './settings/goals.js';
 import AccountTab from './settings/account.js';
 
 const TABS = [
   { id: 'brand', label: 'العلامة', hint: 'الملف الذي يقرؤه كل وكيل', icon: 'palette', view: BrandTab },
   { id: 'agents', label: 'الوكلاء', hint: 'النموذج والجدول والتعليمات', icon: 'bot', view: AgentsTab },
   { id: 'permissions', label: 'الاستقلالية والصلاحيات', hint: 'ما يفعله الوكلاء وحدهم', icon: 'gauge', view: PermissionsTab },
-  { id: 'connections', label: 'الربط', hint: 'Claude والقنوات والبريد', icon: 'plug', min: 'manager', view: ConnectionsTab },
+  { id: 'goals', label: 'أهداف القائد', hint: 'ما يسعى إليه وكيف يتدخل', icon: 'target', view: GoalsTab },
+  { id: 'connections', label: 'الربط', hint: 'Claude والقنوات والبريد', icon: 'plug', min: 'connections', view: ConnectionsTab },
   { id: 'notifications', label: 'الإشعارات والتقارير', hint: 'متى وأين يصلك التقرير', icon: 'bell', view: NotificationsTab },
   { id: 'general', label: 'عام والذكاء الاصطناعي', hint: 'التوقيت والرابط العام والتكلفة', icon: 'globe', view: GeneralTab },
-  { id: 'users', label: 'الفريق', hint: 'الأعضاء وأدوارهم', icon: 'users', min: 'manager', view: UsersTab },
+  { id: 'users', label: 'الفريق', hint: 'الأعضاء وصلاحياتهم', icon: 'users', min: 'users', view: UsersTab },
   { id: 'account', label: 'حسابي', hint: 'بياناتك وكلمة المرور', icon: 'user', view: AccountTab },
 ];
 const BY_ID = Object.fromEntries(TABS.map((t) => [t.id, t]));
@@ -60,8 +62,8 @@ export default function SettingsPage({ params, query }) {
     body = html`<${Empty} icon="compass" title="هذا القسم غير موجود" text="اختر قسمًا من القائمة، أو ابدأ بملف العلامة الذي يقرؤه كل وكيل."
       action=${html`<${Button} size="sm" icon="palette" onClick=${() => go('/settings/brand')}>ملف العلامة</${Button}>`} />`;
   } else if (tab.min && !can(tab.min)) {
-    body = html`<${Empty} icon="lock" title="هذا القسم للمدير والمالك"
-      text="يدير الربط والفريق أصحاب دور المدير أو المالك. اطلب من مالك الحساب ترقية دورك إذا احتجت إليه." />`;
+    body = html`<${Empty} icon="lock" title="لا تملك صلاحية هذا القسم"
+      text=${`يحتاج هذا القسم صلاحية «${capLabel(tab.min)}». اطلبها من مالك الحساب إذا احتجت إليها.`} />`;
   } else {
     const View = tab.view;
     body = html`<${View} query=${query || {}} />`;

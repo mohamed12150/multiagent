@@ -34,7 +34,9 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = _id()
     email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    username: Mapped[str | None] = mapped_column(String(40), unique=True)
     name: Mapped[str] = mapped_column(String(120), default="")
+    permissions: Mapped[list[str] | None] = mapped_column(JSON)  # None = the role's preset (qsm.permissions)
     password_hash: Mapped[str] = mapped_column(String(300), nullable=False)
     role: Mapped[str] = mapped_column(String(16), default="viewer")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -163,6 +165,7 @@ class Campaign(Base):
     daily_budget_cap: Mapped[float] = mapped_column(Float, default=0.0)
     spent: Mapped[float] = mapped_column(Float, default=0.0)
     posts_per_day: Mapped[int] = mapped_column(Integer, default=2)
+    paused_by: Mapped[str] = mapped_column(String(64), default="")  # who paused it: an agent id or user:<id>
     start_date: Mapped[str] = mapped_column(String(10), default="")
     end_date: Mapped[str] = mapped_column(String(10), default="")
     kpis: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)

@@ -108,3 +108,16 @@
   .command { margin: 0 12px 12px; }
   .hello h2 { font-size: 20px; }
 }
+
+/* ---------- القائد's steering card ---------- */
+.sg-goals { display: grid; gap: 14px; }
+.sg-goal .num { font-variant-numeric: tabular-nums; }
+.sg-list { display: flex; flex-direction: column; gap: 12px; }
+.sg-dec { padding: 12px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--surface-2); }
+.sg-acts { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.sg-acts li { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--surface); }
+.sg-acts li .grow { display: flex; flex-direction: column; gap: 2px; }
+.sg-acts li .badge { flex: none; }
+.sg-exp { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-text); }
+.sg-more { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent-text); cursor: pointer; font: inherit; }
+.sg-more:hover { text-decoration: underline; }

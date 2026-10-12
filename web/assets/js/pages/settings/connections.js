@@ -19,7 +19,7 @@ const DIGITS_ID = [/^\d{5,25}$/, 'أرقام فقط كما تظهر في لوح�
 // Mirrors connectors.catalog.PATTERNS so the owner sees the reason before the server refuses the value.
 const RULES = {
   graph_version: [/^v\d{1,2}\.\d$/, 'الصيغة مثل v24.0'],
-  api_version: [/^\d{6}$/, 'ستة أرقام بصيغة YYYYMM، مثل 202509'],
+  api_version: [/^\d{6}$/, 'ستة أرقام بصيغة YYYYMM، مثل 202609'],
   ig_user_id: DIGITS_ID, page_id: DIGITS_ID, phone_number_id: DIGITS_ID, waba_id: DIGITS_ID,
   author_urn: [/^urn:li:(organization|person):[A-Za-z0-9_-]{1,40}$/, 'الصيغة مثل urn:li:organization:12345678'],
   smtp_port: [/^\d{2,5}$/, 'رقم المنفذ، مثل 587 أو 465'],

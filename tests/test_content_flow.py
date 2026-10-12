@@ -144,7 +144,7 @@ def test_signed_public_media_link(owner: TestClient) -> None:
 
 
 def test_editing_an_approved_post_needs_approval_again(owner: TestClient) -> None:
-    owner.post("/api/users", json={"email": "ed@example.test", "name": "محرر", "role": "editor",
+    owner.post("/api/users", json={"email": "ed@example.test", "username": "editor1", "name": "محرر", "role": "editor",
                                    "password": "Editor-pass-2026"}, headers=H)
     r = owner.post("/api/posts", json={"channel": "x", "format": "post", "caption": "نص سليم", "submit": True}, headers=H)
     pid = r.json()["data"]["id"]

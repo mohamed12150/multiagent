@@ -57,10 +57,10 @@ function Connection({ conn }) {
       ${acct.handle && html`<span class="small ltr chp-handle">${acct.handle}</span>`}
     </div>
     ${acct.followers != null && !sandbox && html`<span class="tiny faint">${F.compact(acct.followers)} متابع على الحساب</span>`}
-    ${sandbox && (can('manager')
+    ${sandbox && (can('connections')
       ? html`<${Link} href="/settings/connections" class="small strong row gap-6"><${Icon} name="plug" size="14" />اربط الحساب</${Link}>`
-      : html`<span class="tiny faint">يربط المدير الحساب من الإعدادات</span>`)}
-    ${!sandbox && conn.status === 'error' && can('manager') && html`<${Link} href="/settings/connections" class="small strong">أعد الربط</${Link}>`}
+      : html`<span class="tiny faint">يربط الحساب من يملك صلاحية «الربط والمفاتيح»</span>`)}
+    ${!sandbox && conn.status === 'error' && can('connections') && html`<${Link} href="/settings/connections" class="small strong">أعد الربط</${Link}>`}
   </div>`;
 }
 
@@ -97,7 +97,7 @@ function Hero({ d, ch, onRan }) {
       </div>
     </div>
     <div class="chp-facts"><${Connection} conn=${d.connection} /><${Room} room=${d.room} /></div>
-    ${can('editor') && html`<div class="chp-actions">${RUNS.map((r) => html`<${Button} key=${r.kind} size="sm" icon=${r.icon}
+    ${can('command') && html`<div class="chp-actions">${RUNS.map((r) => html`<${Button} key=${r.kind} size="sm" icon=${r.icon}
       variant=${r.kind === 'channel.analyze' ? 'primary' : ''} loading=${busy === r.kind} disabled=${!!busy}
       onClick=${() => run(r)}>${r.label}</${Button}>`)}</div>`}
   </section>`;
@@ -167,7 +167,7 @@ function Ideas({ ideas, ch }) {
   if (!ideas?.length) return html`<p class="small faint mt-8">لا أفكار مقترحة في آخر تحليل.</p>`;
   return html`<div class="chp-ideas mt-8">${ideas.map((idea, i) => html`<div class="chp-idea" key=${i}>
     <${Icon} name="sparkles" size="15" class="chp-idea-ico" /><p class="grow small">${idea}</p>
-    ${can('editor') && (sent.has(i) ? html`<${Badge} tone="ok" icon="check">قيد الكتابة</${Badge}>`
+    ${can('command') && (sent.has(i) ? html`<${Badge} tone="ok" icon="check">قيد الكتابة</${Badge}>`
       : html`<${Button} size="xs" icon="wand" loading=${busy === i} disabled=${busy !== -1} onClick=${() => toPost(idea, i)}>حوّلها لمنشور</${Button}>`)}
   </div>`)}</div>`;
 }

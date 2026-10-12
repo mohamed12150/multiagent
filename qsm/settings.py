@@ -105,6 +105,18 @@ class General(BaseModel):
     send_window_end: str = Field(default="22:00", pattern=HHMM)
 
 
+class Goals(BaseModel):
+    """What القائد steers toward. Progress is measured month to date against these targets."""
+    focus: Literal["leads", "sales", "engagement", "awareness"] = "leads"
+    monthly_leads: int = Field(default=120, ge=0, le=1_000_000)
+    monthly_reach: int = Field(default=150_000, ge=0, le=1_000_000_000)
+    target_engagement_rate: float = Field(default=4.0, ge=0, le=100)
+    max_daily_interventions: int = Field(default=8, ge=0, le=50)
+    review_start: str = Field(default="08:00", pattern=HHMM)  # القائد reviews only inside working hours
+    review_end: str = Field(default="23:00", pattern=HHMM)
+    notes: str = Field(default="", max_length=1500)  # owner guidance, e.g. "ركّز على باقات الجمعة البيضاء"
+
+
 class AI(BaseModel):
     web_research: bool = True
     fallbacks: bool = True
@@ -112,6 +124,7 @@ class AI(BaseModel):
 
 SECTIONS: dict[str, type[BaseModel]] = {
     "brand": Brand, "limits": Limits, "notify": Notify, "autonomy": Autonomy, "general": General, "ai": AI,
+    "goals": Goals,
 }
 
 

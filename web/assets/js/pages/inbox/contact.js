@@ -14,7 +14,7 @@ function Consent({ contact, busy, onToggle }) {
   return html`<section class=${cls('ib-consent', on ? 'on' : 'off')}>
     <div class="row between">
       <span class="row gap-6 strong small"><${Icon} name="lock" size="15" />موافقة الرسائل التسويقية</span>
-      <${Toggle} checked=${on} label="موافقة العميل على الرسائل التسويقية" disabled=${!can('manager') || busy} onChange=${onToggle} />
+      <${Toggle} checked=${on} label="موافقة العميل على الرسائل التسويقية" disabled=${!can('approve') || busy} onChange=${onToggle} />
     </div>
     ${on ? html`<p class="small mt-8">العميل موافق${contact.opted_in_at ? html` منذ <span class="num">${F.dateTime(contact.opted_in_at)}</span>` : ''}.</p>
         ${contact.opt_source && html`<p class="tiny faint mt-4">المصدر: ${consentSource(contact.opt_source)}</p>`}`
@@ -32,7 +32,7 @@ export function ContactPanel({ contact, onSaved }) {
   if (!contact) {
     return html`<${Empty} icon="user" title="لا توجد بطاقة للعميل" text="لم يُربط هذا الحوار بجهة اتصال بعد. تُنشأ البطاقة تلقائيًا مع أول رسالة واردة." />`;
   }
-  const editable = can('editor');
+  const editable = can('inbox');
   const save = async (patch, key, okMsg) => {
     setBusy(key);
     try {

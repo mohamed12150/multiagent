@@ -3,12 +3,16 @@ import { html, cls, useState, useEffect } from '../lib/h.js';
 import { api, useApi } from '../lib/api.js';
 import { useLive } from '../lib/live.js';
 import { Link, setQuery } from '../lib/router.js';
-import { can } from '../lib/store.js';
+import { can, capLabel } from '../lib/store.js';
 import { ago, money, formatLabel, APPROVAL_KIND, CHANNEL_LABEL, POST_STATUS } from '../lib/format.js';
 import { Icon, Button, Badge, StatusBadge, AgentMark, ChannelMark, Empty, Skeleton, Loader, Seg, SimTag } from '../ui/core.js';
 import { confirm, toast } from '../ui/overlays.js';
+import { PlanBody } from './network/steering.js';
 
-const KINDS = ['post', 'asset', 'reply', 'campaign', 'limit', 'broadcast', 'fix'];
+const KINDS = ['plan', 'post', 'asset', 'reply', 'campaign', 'limit', 'broadcast', 'fix'];
+// Approving these applies limit or system changes, so they follow the capability that owns them (server: DECIDE_CAP).
+const DECIDE_CAP = { limit: 'autonomy', plan: 'autonomy', fix: 'agents' };
+const canDecide = (kind) => can('approve') && can(DECIDE_CAP[kind] || 'approve');
 
 function PostPreview({ id }) {
   const [p, setP] = useState(null);
@@ -33,6 +37,7 @@ function PostPreview({ id }) {
 function Body({ a, text, setText }) {
   const p = a.payload || {};
   if (a.kind === 'post') return html`<${PostPreview} id=${a.ref_id} />`;
+  if (a.kind === 'plan') return html`<${PlanBody} a=${a} />`;
   if (a.kind === 'asset') {
     return html`<div class="ap-asset">${p.thumb && html`<img src=${p.thumb} alt=${a.title} loading="lazy" />`}
       <div><p>${a.summary}</p><${Link} href="/library?status=pending" class="small">افتح المكتبة</${Link}></div></div>`;
@@ -41,13 +46,13 @@ function Body({ a, text, setText }) {
     return html`<div class="col">
       <div class="ap-bubble in"><span class="tiny faint">رسالة العميل</span><p class="pre">${p.incoming}</p></div>
       <div class="ap-bubble out"><span class="tiny faint">رد صانع المحتوى المقترح (يمكنك تعديله)</span>
-        <textarea class="textarea" value=${text} onInput=${(e) => setText(e.currentTarget.value)} disabled=${!can('manager')} /></div>
+        <textarea class="textarea" value=${text} onInput=${(e) => setText(e.currentTarget.value)} disabled=${!can('approve')} /></div>
       <${Link} href=${`/inbox?c=${p.conversation_id}`} class="small">افتح المحادثة كاملة</${Link}>
     </div>`;
   }
   if (a.kind === 'limit') {
     return html`<div class="ap-limit"><div class="ap-from num">${p.old}</div><${Icon} name="arrowLeft" size="20" /><div class="ap-to num">${p.new}</div>
-      <div class="grow"><p>${a.summary}</p><p class="tiny faint mt-4">${p.within_authority ? 'ضمن سقف صلاحية مدير الحملات، لكن صلاحية الرفع عندك «باعتمادك».' : 'يتجاوز السقف الذي منحته لمدير الحملات.'}</p></div></div>`;
+      <div class="grow"><p>${a.summary}</p><p class="tiny faint mt-4">${p.within_authority ? 'ضمن السقف الذي منحته، لكن صلاحية هذا الوكيل عندك «باعتمادك».' : 'يتجاوز خطوة الرفع أو السقف الذي منحته للوكلاء.'}</p></div></div>`;
   }
   if (a.kind === 'campaign') {
     return html`<div class="col"><p>${a.summary}</p>
@@ -61,7 +66,7 @@ function Body({ a, text, setText }) {
 const VERBS = {
   post: ['اعتماد للنشر', 'اطلب تعديل'], asset: ['اعتماد التصميم', 'رفض'], reply: ['اعتماد وإرسال', 'تجاهل الرد'],
   campaign: ['اعتماد الحملة', 'رفض'], limit: ['موافقة على الرفع', 'رفض'], fix: ['نفّذ الإصلاح', 'تجاهل'],
-  broadcast: ['اعتماد الإرسال', 'رفض'], spend: ['موافقة', 'رفض'],
+  broadcast: ['اعتماد الإرسال', 'رفض'], spend: ['موافقة', 'رفض'], plan: ['اعتمد الخطة ونفّذ', 'رفض الخطة'],
 };
 
 function ApprovalCard({ a, onDone }) {
@@ -97,7 +102,7 @@ function ApprovalCard({ a, onDone }) {
     </header>
     <div class="ap-body"><${Body} a=${a} text=${text} setText=${setText} /></div>
     ${decided ? a.note && html`<p class="small muted ap-note">ملاحظتك: ${a.note}</p>`
-      : can('manager') ? html`<footer class="ap-foot">
+      : canDecide(a.kind) ? html`<footer class="ap-foot">
         <${Button} variant="ok" icon="check" loading=${busy === 'yes'} onClick=${() => decide(true)}>${yes}</${Button}>
         <${Button} variant=${a.kind === 'post' ? '' : 'danger'} icon=${a.kind === 'post' ? 'edit' : 'x'} loading=${busy === 'no'} onClick=${() => decide(false)}>${no}</${Button}>
         ${a.kind === 'post' && html`<${Button} variant="ghost" onClick=${async () => {
@@ -105,7 +110,7 @@ function ApprovalCard({ a, onDone }) {
             try { await api.post(`/approvals/${a.id}/decide`, { approve: false, note: '' }); setLeaving(true); setTimeout(() => onDone(a.id), 260); } catch (e) { toast.error(e); }
           }
         }}>رفض نهائي</${Button}>`}
-      </footer>` : html`<p class="tiny faint ap-note">يعتمده المدير أو المالك.</p>`}
+      </footer>` : html`<p class="tiny faint ap-note">يعتمده من يملك صلاحية «${capLabel(DECIDE_CAP[a.kind] || 'approve')}».</p>`}
   </article>`;
 }
 

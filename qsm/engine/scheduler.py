@@ -23,6 +23,7 @@ AT_GRACE_H = 3  # a daily routine missed by more than this (e.g. server was off)
 
 ROUTINE_SKILLS: dict[tuple[str, str], str] = {
     ("ceo", "plan_day"): "ceo.plan_day",
+    ("ceo", "steer"): "ceo.steer",
     ("campaigns", "optimize"): "campaigns.optimize",
     ("campaigns", "propose"): "campaigns.propose",
     ("coordinator", "distribute"): "coordinator.distribute",
@@ -30,8 +31,8 @@ ROUTINE_SKILLS: dict[tuple[str, str], str] = {
     ("guardian", "sweep"): "guardian.sweep",
 }
 CHANNEL_ROUTINES = {"engage": "channel.engage", "metrics": "channel.metrics", "analyze": "channel.analyze"}
-TITLES = {"ceo.plan_day": "تخطيط محتوى اليوم", "campaigns.optimize": "مراجعة الحملات والليمت",
-          "campaigns.propose": "اقتراح حملات الأسبوع", "coordinator.distribute": "جدولة المحتوى المعتمد",
+TITLES = {"ceo.plan_day": "تخطيط محتوى اليوم", "ceo.steer": "مراجعة الأداء والتدخل",
+          "campaigns.optimize": "مراجعة الحملات والليمت", "campaigns.propose": "اقتراح حملات الأسبوع", "coordinator.distribute": "جدولة المحتوى المعتمد",
           "coordinator.daily_report": "تقرير الإنجاز اليومي", "guardian.sweep": "فحص النظام",
           "channel.engage": "متابعة التعليقات والرسائل", "channel.metrics": "تحديث المؤشرات",
           "channel.analyze": "تحليل الأداء", "channel.publish": "نشر المجدول"}
@@ -121,6 +122,7 @@ class Scheduler:
             row = s.get(Setting, STATE_KEY)
             state: dict[str, str] = dict(row.value) if row is not None and isinstance(row.value, dict) else {}
             report_at = settings.get(s, "notify").report_time
+            goals = settings.get(s, "goals")
             agents = s.scalars(select(Agent).where(Agent.enabled.is_(True), Agent.paused.is_(False))).all()
             for agent in agents:
                 for name, cfg in (agent.routines or {}).items():
@@ -128,6 +130,9 @@ class Scheduler:
                     if kind is None:
                         continue
                     key = f"{agent.id}:{name}"
+                    if kind == "ceo.steer" and not clock.in_window(goals.review_start, goals.review_end,
+                                                                   clock.to_local(now)):
+                        continue  # القائد reviews in working hours only; the first tick after review_start catches up
                     override = report_at if kind == "coordinator.daily_report" else None
                     if not due(cfg if override is None else {**cfg, "at": override}, _parse(state.get(key)), now):
                         continue

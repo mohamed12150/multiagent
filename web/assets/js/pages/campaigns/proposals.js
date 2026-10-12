@@ -84,5 +84,5 @@ export function ProposalsTab({ rows, proposing, onPropose, onDecided }) {
     ${rows.length ? html`<div class="cp-props">${rows.map((c) => html`<${ProposalCard} key=${c.id} c=${c} onDecided=${onDecided} />`)}</div>`
       : !proposing && html`<div class="card"><${Empty} icon="lightbulb" title="لا توجد مقترحات بانتظارك"
           text="اطلب من مدير الحملات اقتراحًا، وسيدرس أداءك والمنافسين والمواسم السعودية القادمة ثم يعرض عليك خطة كاملة بميزانيتها ومؤشراتها لتعتمدها أو ترفضها."
-          action=${can('editor') && html`<${Button} variant="primary" icon="wand" onClick=${onPropose}>اقترح حملة</${Button}>`} /></div>`}`;
+          action=${can('proposals') && html`<${Button} variant="primary" icon="wand" onClick=${onPropose}>اقترح حملة</${Button}>`} /></div>`}`;
 }

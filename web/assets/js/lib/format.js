@@ -125,6 +125,7 @@ export const CATEGORY = {
 export const APPROVAL_KIND = {
   post: ['محتوى', 'file'], asset: ['تصميم', 'image'], reply: ['رد على عميل', 'message'], campaign: ['حملة', 'megaphone'],
   limit: ['رفع ليمت', 'gauge'], broadcast: ['رسالة جماعية', 'send'], fix: ['إصلاح', 'shield'], spend: ['صرف', 'coins'],
+  plan: ['خطة القائد', 'compass'],
 };
 export const PERM_VALUE = { auto: 'تلقائي', approve: 'باعتمادك', off: 'موقوف' };
 export const AUTONOMY = {

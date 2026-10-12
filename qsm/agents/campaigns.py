@@ -268,7 +268,7 @@ async def optimize(ctx: Ctx) -> dict[str, Any]:
                                               reason=act.get("reason", ""), campaign_id=camp.id)
                 applied.append(f"سقف «{camp.name}» اليومي إلى {value:g}: {CHANGE_LABELS[change.status]}")
             elif kind == "pause":
-                camp.status = "paused"  # pausing only reduces spend, it never needs authority
+                camp.status, camp.paused_by = "paused", "campaigns"  # pausing only reduces spend
                 applied.append(f"أوقف «{camp.name}» مؤقتًا: {act.get('reason', '')}")
         for req in d.get("limit_requests", [])[:3]:
             try:

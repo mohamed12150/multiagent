@@ -104,6 +104,6 @@ export function CampaignsTab({ rows, proposals, status, onStatus, onChanged, onP
       : html`<div class="card mt-16"><${Empty} icon="megaphone" title="لا توجد حملات جارية بعد"
           text="اطلب من مدير الحملات اقتراح حملة مبنية على أدائك ومنافسيك والمواسم القادمة، أو أنشئ حملة يدوية بميزانيتك وقنواتك."
           action=${html`<div class="row wrap gap-6 cp-center">
-            ${can('editor') && html`<${Button} variant="primary" icon="wand" onClick=${onPropose}>اقترح حملة</${Button}>`}
-            ${can('manager') && html`<${Button} icon="plus" onClick=${onManual}>حملة يدوية</${Button}>`}</div>`} /></div>`}`;
+            ${can('proposals') && html`<${Button} variant="primary" icon="wand" onClick=${onPropose}>اقترح حملة</${Button}>`}
+            ${can('campaigns') && html`<${Button} icon="plus" onClick=${onManual}>حملة يدوية</${Button}>`}</div>`} /></div>`}`;
 }

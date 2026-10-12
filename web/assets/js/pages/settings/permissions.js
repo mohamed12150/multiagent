@@ -37,7 +37,7 @@ function LevelCard({ level, current, preset, catalog, busy, onPick, owner }) {
 
 function Levels({ level, presets, catalog, agents, onApplied }) {
   const [busy, setBusy] = useState(false);
-  const owner = can('owner');
+  const owner = can('autonomy');
   const drift = agents ? driftOf(agents, presets[level]) : 0;
   const apply = async (next) => {
     if (next === level && !drift) return;
@@ -110,7 +110,7 @@ export default function PermissionsTab() {
   const meta = useCachedApi('/settings');
   const net = useCachedApi('/network');
   const [pending, setPending] = useState(new Set());
-  const editable = can('owner'); // permission changes are owner-only on the server
+  const editable = can('autonomy'); // permission changes are owner-only on the server
   useLive('autonomy', () => { meta.reload(); net.reload(); });
 
   const setPerm = (id, key, value) => net.setData((n) => n && ({

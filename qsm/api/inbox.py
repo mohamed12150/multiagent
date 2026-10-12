@@ -6,13 +6,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import events, security
+from .. import events, permissions
 from ..agents.runtime import already_pending, enqueue, task_dict
 from ..db import utcnow
 from ..engine import approvals
 from ..models import Contact, Conversation, Message, User
 from . import serial
-from .deps import ApiError, actor, ai_quota, editor, found, get_db, ok, viewer
+from .deps import ApiError, actor, ai_quota, cap, found, get_db, ok, viewer
 
 router = APIRouter(prefix="/api", tags=["inbox"])
 STATUSES = ("open", "pending", "answered", "escalated", "closed")
@@ -56,7 +56,7 @@ class ReplyIn(BaseModel):
 
 
 @router.post("/inbox/{conv_id}/reply")
-def human_reply(conv_id: str, body: ReplyIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def human_reply(conv_id: str, body: ReplyIn, user: User = Depends(cap("inbox")), s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Conversation, conv_id), "المحادثة")
     for pending in s.scalars(select(Message).where(Message.conversation_id == conv_id,
                                                    Message.status == "pending")).all():
@@ -72,7 +72,7 @@ def human_reply(conv_id: str, body: ReplyIn, user: User = Depends(editor), s: Se
 
 
 @router.post("/inbox/{conv_id}/ai-reply")
-def ai_reply(conv_id: str, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def ai_reply(conv_id: str, user: User = Depends(cap("inbox")), s: Session = Depends(get_db, scope="function")) -> dict:
     found(s.get(Conversation, conv_id), "المحادثة")
     ai_quota(user)
     if already_pending(s, "content.reply", "content", "conversation_id", conv_id):
@@ -87,7 +87,7 @@ class ConvPatch(BaseModel):
 
 
 @router.patch("/inbox/{conv_id}")
-def set_status(conv_id: str, body: ConvPatch, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def set_status(conv_id: str, body: ConvPatch, user: User = Depends(cap("inbox")), s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Conversation, conv_id), "المحادثة")
     if body.status not in STATUSES:
         raise ApiError(422, "bad_status", "حالة غير معروفة")
@@ -119,7 +119,7 @@ class ContactPatch(BaseModel):
 
 
 @router.patch("/contacts/{contact_id}")
-def edit_contact(contact_id: str, body: ContactPatch, user: User = Depends(editor),
+def edit_contact(contact_id: str, body: ContactPatch, user: User = Depends(cap("inbox")),
                  s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Contact, contact_id), "جهة الاتصال")
     if body.stage is not None:
@@ -131,7 +131,7 @@ def edit_contact(contact_id: str, body: ContactPatch, user: User = Depends(edito
     if body.notes is not None:
         c.notes = body.notes
     if body.opted_in is not None:
-        if not security.has_role(user, "manager"):
+        if not permissions.has(user, "approve"):
             raise ApiError(403, "consent_manager", "تسجيل موافقة التواصل يعتمده المدير أو المالك")
         if body.opted_in and not (body.opt_source or "").strip():
             raise ApiError(422, "consent_source", "حدد مصدر الموافقة (مثل: نموذج الموقع، طلب شفهي موثق)")

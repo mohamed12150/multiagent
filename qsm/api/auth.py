@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import hmac
+import re
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import config, events, security, settings
@@ -29,7 +30,8 @@ class SetupIn(BaseModel):
 
 
 class LoginIn(BaseModel):
-    email: str = Field(max_length=200)
+    email: str = Field(default="", max_length=200)  # email or username (kept as "email" for older clients)
+    login: str = Field(default="", max_length=200)
     password: str = Field(max_length=200)
 
 
@@ -67,7 +69,9 @@ def setup(body: SetupIn, request: Request, response: Response, s: Session = Depe
     problem = security.password_problem(body.password)
     if problem:
         raise ApiError(422, "weak_password", problem)
-    user = User(email=email, name=body.name.strip(), password_hash=security.hash_password(body.password), role="owner")
+    handle = re.sub(r"[^a-z0-9._-]", "", email.split("@")[0])[:32] or "owner"
+    user = User(email=email, username=handle if len(handle) >= 3 else "owner", name=body.name.strip(),
+                password_hash=security.hash_password(body.password), role="owner")
     s.add(user)
     s.flush()
     settings.patch(s, "brand", {"name": body.company.strip()}, by=f"user:{user.id}")
@@ -81,12 +85,12 @@ def setup(body: SetupIn, request: Request, response: Response, s: Session = Depe
 @router.post("/login")
 def login(body: LoginIn, request: Request, response: Response, s: Session = Depends(get_db, scope="function")) -> dict:
     ip = client_ip(request)
-    email = body.email.strip().lower()
+    ident = (body.login or body.email).strip().lower()
     login_limiter.check(ip)
-    failures = f"{email}|{ip}"
+    user = s.scalar(select(User).where(or_(func.lower(User.email) == ident, func.lower(User.username) == ident)))
+    failures = f"{user.id if user else ident}|{ip}"  # email and username of one account share a single budget
     if failure_limiter.blocked(failures):
         raise ApiError(429, "locked", "محاولات خاطئة كثيرة — حاول بعد 15 دقيقة")
-    user = s.scalar(select(User).where(func.lower(User.email) == email))
     # Same work and the same answer whether or not the account exists (no user enumeration by timing or status).
     valid = security.verify_password(body.password, user.password_hash if user else _DUMMY_HASH)
     if user is None or not user.active or not valid:
@@ -94,7 +98,7 @@ def login(body: LoginIn, request: Request, response: Response, s: Session = Depe
         if user is not None:
             security.register_failure(user)  # kept for the audit trail; the lock itself is per (email, IP)
             s.commit()  # the error below rolls the request back; the record must survive it
-        raise ApiError(401, "bad_credentials", "البريد أو كلمة المرور غير صحيحة")
+        raise ApiError(401, "bad_credentials", "بيانات الدخول أو كلمة المرور غير صحيحة")
     failure_limiter.clear(failures)
     user.failed_logins, user.locked_until = 0, None
     token = security.create_session(s, user, ip=client_ip(request), user_agent=request.headers.get("user-agent", ""))

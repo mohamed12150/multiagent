@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from .. import config, events
+from .. import config, events, permissions
 from ..agents.guardian import FIX_LABELS
 from ..agents.runtime import enqueue, runtime, task_dict
 from ..ai import client as ai
@@ -17,7 +17,7 @@ from ..engine import approvals, incidents
 from ..engine.scheduler import scheduler
 from ..models import Approval, Connection, Incident, Message, Notification, Setting, Task, User
 from . import serial
-from .deps import ApiError, actor, editor, found, get_db, manager, ok, viewer
+from .deps import ApiError, actor, cap, found, get_db, ok, viewer
 
 router = APIRouter(prefix="/api", tags=["system"])
 
@@ -40,9 +40,17 @@ class DecisionIn(BaseModel):
     text: str | None = Field(default=None, max_length=4000)  # an edited reply before approving it
 
 
+# Approving these applies limit, budget or system changes that their own screens reserve for these capabilities.
+DECIDE_CAP = {"limit": "autonomy", "plan": "autonomy", "fix": "agents"}
+
+
 @router.post("/approvals/{approval_id}/decide")
-def decide(approval_id: str, body: DecisionIn, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def decide(approval_id: str, body: DecisionIn, user: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Approval, approval_id), "الطلب")
+    need = DECIDE_CAP.get(a.kind)
+    if need and not permissions.has(user, need):
+        label = permissions.CAPABILITIES[need]["label"]
+        raise ApiError(403, "forbidden", f"هذا الطلب يغيّر ما تحكمه صلاحية «{label}»")
     if body.text is not None and a.kind == "reply" and body.approve:
         m = s.get(Message, a.ref_id)
         if m is not None and m.status == "pending":
@@ -92,14 +100,14 @@ def guardian(_: User = Depends(viewer), s: Session = Depends(get_db, scope="func
 
 
 @router.post("/guardian/sweep")
-def sweep(user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def sweep(user: User = Depends(cap("command")), s: Session = Depends(get_db, scope="function")) -> dict:
     t = enqueue(s, kind="guardian.sweep", title="فحص شامل (طلب المالك)", created_by=actor(user), origin="user",
                 priority=1)
     return ok(task_dict(t))
 
 
 @router.post("/guardian/incidents/{incident_id}/fix")
-def fix(incident_id: str, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def fix(incident_id: str, user: User = Depends(cap("agents")), s: Session = Depends(get_db, scope="function")) -> dict:
     inc = found(s.get(Incident, incident_id), "الحادثة")
     if not inc.fix_action:
         raise ApiError(409, "no_playbook", "لا توجد خطة إصلاح آلية لهذه الحالة")
@@ -111,7 +119,7 @@ def fix(incident_id: str, user: User = Depends(manager), s: Session = Depends(ge
 
 
 @router.post("/guardian/incidents/{incident_id}/ignore")
-def ignore(incident_id: str, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def ignore(incident_id: str, user: User = Depends(cap("agents")), s: Session = Depends(get_db, scope="function")) -> dict:
     inc = found(s.get(Incident, incident_id), "الحادثة")
     incidents.close(s, inc, "ignored", f"تجاهلها {actor(user)}")
     events.record(s, "guardian.ignored", f"تجاهل المالك: {inc.title}", actor=actor(user))

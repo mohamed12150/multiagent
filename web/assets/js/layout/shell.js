@@ -87,9 +87,9 @@ function AutonomyMenu({ level }) {
       <${Icon} name="gauge" size="16" /><span class="lbl">الاستقلالية:</span><b>${AUTONOMY[level]?.[0]}</b></button>
     ${open && html`<div class="menu" style="inset-inline-end:0;top:42px;width:300px" role="menu">
       ${Object.entries(AUTONOMY).map(([k, [name, hint]]) => html`<button role="menuitemradio" aria-checked=${k === level}
-        disabled=${!can('owner')} onClick=${() => pick(k)}>
+        disabled=${!can('autonomy')} onClick=${() => pick(k)}>
         <${Icon} name=${k === level ? 'checkCircle' : 'gauge'} size="17" /><span class="col gap-4" style="gap:0"><b>${name}</b><span class="tiny muted">${hint}</span></span></button>`)}
-      ${!can('owner') && html`<p class="tiny faint" style="padding:6px 10px">يغيّره المالك فقط</p>`}
+      ${!can('autonomy') && html`<p class="tiny faint" style="padding:6px 10px">يغيّره المالك فقط</p>`}
     </div>`}
   </div>`;
 }

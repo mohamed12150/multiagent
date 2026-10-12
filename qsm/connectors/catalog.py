@@ -87,7 +87,7 @@ PROVIDERS: dict[str, dict[str, Any]] = {
               help="صفحة الشركة (organization) أو حساب شخصي (person)"),
             f("access_token", "رمز الوصول", secret=True,
               help="صلاحيات: w_organization_social, r_organization_social (أو w_member_social)"),
-            f("api_version", "إصدار الواجهة (YYYYMM)", default="202509", required=False),
+            f("api_version", "إصدار الواجهة (YYYYMM)", default="202609", required=False),
         ],
     },
     "email": {

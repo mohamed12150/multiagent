@@ -1,4 +1,5 @@
-"""القائد — turns the owner's commands into delegated tasks, and plans each day's work."""
+"""القائد — turns the owner's commands into delegated work and direct interventions, plans each day's content, and
+every few hours steers the month toward the owner's goals on its own (see `steer`)."""
 from __future__ import annotations
 
 from typing import Any
@@ -6,9 +7,9 @@ from typing import Any
 from sqlalchemy import select
 
 from .. import db, settings
-from ..engine import clock, limits
+from ..engine import clock, limits, policy
 from ..models import CHANNELS, Campaign
-from . import prompts, state, text
+from . import prompts, state, steer, text
 from .registry import BY_ID, CHANNEL_LABELS, DELEGATABLE
 from .runtime import Ctx, SkillError, skill
 
@@ -38,6 +39,8 @@ PLAN_SCHEMA: dict[str, Any] = {
             "count": {"type": "integer"},
             "campaign_id": {"type": "string"},
         }}},
+        "interventions": {"type": "array", "description": "تعديلات مباشرة على الحملات والسعة إن طلبها الأمر",
+                          "items": steer.ACTION_ITEM},
     },
 }
 
@@ -86,7 +89,16 @@ def _simulate_plan(command: str, campaigns: list[dict[str, Any]]) -> dict[str, A
         add("content.create_post", "محتوى إنستقرام يخدم الطلب", "instagram", count=1)
     names = "، ".join(dict.fromkeys(BY_ID[_owner(t)].name for t in tasks))
     return {"reply": f"تم. وزّعت أمرك على {names}. سأتابع التنفيذ وأرفع لك ما يحتاج اعتمادك.",
-            "tasks": tasks[:MAX_TASKS]}
+            "tasks": tasks[:MAX_TASKS], "interventions": _simulate_interventions(command, campaigns)}
+
+
+def _simulate_interventions(command: str, campaigns: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Without a key: honour an explicit "pause/stop campaign X" order when the campaign is named."""
+    if not text.has_any(command, "أوقف", "اوقف", "إيقاف", "ايقاف"):
+        return []
+    named = [c for c in campaigns if c["status"] == "active" and c["name"] and c["name"] in command]
+    return [{**steer.BLANK, "type": "pause_campaign", "campaign_id": c["id"], "reason": "بأمر المالك"}
+            for c in named[:2]]
 
 
 def _owner(task: dict[str, Any]) -> str:
@@ -117,11 +129,16 @@ async def command(ctx: Ctx) -> dict[str, Any]:
         raise SkillError("الأمر فارغ")
     with db.session() as s:
         overview = state.overview(s, days=7)
+        goals = settings.get(s, "goals")
+        month = steer.progress(s, goals)
     campaigns = overview["campaigns"]
     ctx.progress("يحلل الأمر ويوزّع المهام")
     prompt = (f"أمر المالك:\n{order}\n\nفريقك:\n{prompts.roster()}\n\n{SKILL_GUIDE}\n\n"
+              f"وتستطيع التدخل مباشرة (interventions) دون تكليف أحد:\n{steer.ACTION_GUIDE}\n\n"
+              f"أهداف الشهر والتقدم نحوها:\n{state.compact(month)}\n"
               f"صورة العمل (آخر 7 أيام):\n{state.compact(overview)}\n\n"
               f"حوّل الأمر إلى أقل عدد من المهام يحقق الهدف (حد أقصى {MAX_TASKS}). لا تكلّف بما لا يلزم. "
+              "إن طلب المالك تعديلًا على حملة أو سعة قناة فنفّذه في interventions بدل تكليف مدير الحملات. "
               "إن كان الأمر سؤالًا عن الأرقام فأجب في reply من صورة العمل ولا تُنشئ مهام.")
     result = await ctx.ai(prompt=prompt, schema=PLAN_SCHEMA, max_tokens=2500,
                           simulate=lambda: _simulate_plan(order, campaigns))
@@ -135,7 +152,30 @@ async def command(ctx: Ctx) -> dict[str, Any]:
         inp = {"brief": t["brief"], "count": t["count"], "campaign_id": t["campaign_id"], "focus": t["brief"]}
         ctx.spawn(t["skill"], t["title"], inp, channel=t["channel"] or None, priority=3)
     reply = str(plan.get("reply") or "تم استلام الأمر.")
-    return {"summary": reply, "plan": tasks, "_wait_children": bool(tasks)}
+    done = _intervene_on_order(ctx, plan.get("interventions") or [], reply)
+    if done:
+        reply += "\n" + "؛ ".join(f"{r['label']} ({STATUS_WORDS.get(r['status'], r['status'])})" for r in done)
+    return {"summary": reply, "plan": tasks, "interventions": done, "_wait_children": bool(tasks)}
+
+
+STATUS_WORDS = {"done": "نُفّذ", "pending": "بانتظار اعتمادك", "awaiting": "في خطة بانتظار اعتمادك",
+                "rejected": "خارج الصلاحية", "skipped": "لم يعد مناسبًا", "observed": "التدخل موقوف",
+                "deferred": "أُجّل"}
+
+
+def _intervene_on_order(ctx: Ctx, raw: list[Any], reply: str) -> list[dict[str, str]]:
+    """Interventions in a command follow the same `intervene` rules; a member without the campaigns capability
+    cannot make القائد act on campaigns directly — their order becomes a plan for someone who can."""
+    with db.session() as s:
+        acts = [a for a in (steer.clean(s, r) for r in raw[:steer.MAX_ACTIONS]) if a and a["type"] in steer.CHANGES]
+        if not acts:
+            return []
+        mode = policy.decide(s, "ceo", "intervene")
+        if mode == "auto" and not ctx.input.get("can_steer"):
+            mode = "approve"
+        out = steer.carry_out(s, acts, mode=mode, room=steer.MAX_ACTIONS, ref_id=ctx.task_id,
+                              parent_id=ctx.task_id, assessment=f"بأمر: {text.clip(reply, 300)}", source="command")
+    return list(out["results"])
 
 
 def _simulate_day(rooms: dict[str, int], brand: settings.Brand, campaigns: list[Campaign]) -> dict[str, Any]:
@@ -160,13 +200,16 @@ async def plan_day(ctx: Ctx) -> dict[str, Any]:
         brand = settings.get(s, "brand")
         overview = state.overview(s, days=7)
         occasions = text.upcoming_occasions(clock.today())
+        month = steer.progress(s, settings.get(s, "goals"))
     if not any(rooms.values()) and not any(camp_rooms.values()):
         return {"summary": "لا توجد سعة نشر متبقية اليوم — الليمت مكتمل", "items": []}
     ctx.progress("يخطط لمحتوى اليوم")
     prompt = (f"خطط محتوى اليوم. السعة المتبقية للمنشورات بدون حملات: {rooms}\n"
               f"الحملات النشطة وسعتها: {[{'id': c.id, 'name': c.name, 'channels': c.channels, 'room': camp_rooms[c.id]} for c in active]}\n"
               f"المناسبات القادمة: {occasions}\n"
+              f"هدف الشهر ({steer.FOCUS_LABELS[month['focus']]}) والتقدم نحوه: {state.compact(month)}\n"
               f"صورة العمل:\n{state.compact(overview)}\n\n"
+              "اجعل كل منشور يخدم هدف الشهر مباشرة؛ إن كانت الوتيرة متأخرة فقدّم ما يثبت أنه يجلب النتيجة.\n"
               "لكل قناة لديها سعة: حدد فكرة محددة (brief) وعدد المنشورات (لا يتجاوز السعة)، واربطها بحملة نشطة إن "
               "كانت القناة ضمنها. نوّع الزوايا ولا تكرر فكرة الأمس.")
     result = await ctx.ai(prompt=prompt, schema=DAY_SCHEMA, max_tokens=2000,
@@ -194,3 +237,38 @@ async def plan_day(ctx: Ctx) -> dict[str, Any]:
     focus = str(plan.get("focus") or "")
     return {"summary": f"خطة اليوم: {focus} — {spawned} منشورات قيد الكتابة", "focus": focus,
             "_wait_children": spawned > 0}
+
+
+@skill("ceo.steer")
+async def steer_month(ctx: Ctx) -> dict[str, Any]:
+    """Measure the month against the goals and act: the CEO's own decisions, not proposals."""
+    with db.session() as s:
+        goals = settings.get(s, "goals")
+        pic = steer.picture(s, goals)
+        room = goals.max_daily_interventions - steer.used_today(s)
+    ctx.progress("يقيس الشهر مقابل الأهداف ويقرر")
+    guidance = f"توجيهات المالك: {goals.notes}\n" if goals.notes.strip() else ""
+    prompt = (f"أنت صاحب القرار في بلوغ أهداف هذا الشهر. هدف التركيز: {steer.FOCUS_LABELS[goals.focus]}.\n"
+              f"{guidance}الصورة الكاملة (أرقام محسوبة بدقة):\n{state.compact(pic)}\n\n{steer.ACTION_GUIDE}\n\n"
+              "قواعد القرار:\n"
+              f"- لا تحكم على حملة عمرها أقل من {steer.MIN_DAYS_TO_JUDGE} أيام.\n"
+              "- كل إجراء يستند إلى رقم من الصورة تذكره في reason، وتذكر أثره المتوقع في expected.\n"
+              "- انقل الميزانية من الأضعف عائدًا إلى الأقوى بدل زيادة الصرف الكلي، وارفع السعة لما أثبت عائده فقط.\n"
+              "- لا تكرر قرارًا من recent_decisions ما لم تتغير الأرقام منذ اتخاذه.\n"
+              "- إن كان كل شيء على المسار فاكتفِ بالتقييم بلا إجراءات.\n"
+              f"- حد أقصى {steer.MAX_ACTIONS} إجراءات، والمتبقي لك اليوم {max(0, room)} تدخلات.")
+    result = await ctx.ai(prompt=prompt, schema=steer.STEER_SCHEMA, max_tokens=3500,
+                          simulate=lambda: steer.simulate(pic, goals))
+    d = result.data or {}
+    assessment = text.clip(str(d.get("assessment") or "تمت مراجعة الأداء"), 600)
+    with db.session() as s:
+        # Mode and room are read again after the model's answer: the owner may have changed them meanwhile.
+        mode = policy.decide(s, "ceo", "intervene")
+        room = settings.get(s, "goals").max_daily_interventions - steer.used_today(s)
+        acts = [a for a in (steer.clean(s, r) for r in (d.get("actions") or [])[:steer.MAX_ACTIONS]) if a]
+        out = steer.carry_out(s, acts, mode=mode, room=room, ref_id=ctx.task_id, parent_id=ctx.task_id,
+                              assessment=assessment, source="steer", goals=pic["progress"])
+    lines = [f"{r['label']} ({STATUS_WORDS.get(r['status'], r['status'])})" for r in out["results"]]
+    summary = assessment + (" — " + "؛ ".join(lines[:4]) if lines else "")
+    return {"summary": summary, "assessment": assessment, "risks": d.get("risks") or [], "mode": out["mode"],
+            "actions": out["results"]}

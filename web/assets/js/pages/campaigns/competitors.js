@@ -40,8 +40,8 @@ function RivalCard({ r, onEdit, onDeleted }) {
         ${site ? html`<a class="tiny ltr cp-site" href=${site} target="_blank" rel="noopener noreferrer">${hostOf(site)}</a>`
           : html`<span class="tiny faint">بلا موقع مسجّل</span>`}</div>
       ${threat && html`<${Badge} tone=${threat[1]} icon="flame">${threat[0]}</${Badge}>`}
-      ${can('editor') && html`<${Button} size="sm" variant="ghost" icon="edit" title="تعديل" aria-label=${`تعديل ${r.name}`} onClick=${() => onEdit(r)} />`}
-      ${can('manager') && html`<${Button} size="sm" variant="ghost" icon="trash" class="cp-del" title="حذف" aria-label=${`حذف ${r.name}`} onClick=${del} />`}
+      ${can('proposals') && html`<${Button} size="sm" variant="ghost" icon="edit" title="تعديل" aria-label=${`تعديل ${r.name}`} onClick=${() => onEdit(r)} />`}
+      ${can('campaigns') && html`<${Button} size="sm" variant="ghost" icon="trash" class="cp-del" title="حذف" aria-label=${`حذف ${r.name}`} onClick=${del} />`}
     </header>
     ${handles.length > 0 && html`<div class="cp-handles">${handles.map(([ch, h]) => html`<span class="cp-handle" key=${ch}>
       <${ChannelMark} ch=${ch} size="sm" /><span class="ltr ellipsis">${h}</span></span>`)}</div>`}
@@ -150,7 +150,7 @@ export function CompetitorsTab() {
     <div class="cp-section-head">
       <div class="grow"><h2>منافسوك تحت المجهر</h2>
         <p>يقرأ مدير الحملات حضور كل منافس ومحتواه وعروضه، ويستخرج الفرص التي تتفوق بها عليه. يعتمد على هذه القراءة في كل مقترح حملة.</p></div>
-      ${can('editor') && html`<div class="cp-acts">
+      ${can('proposals') && html`<div class="cp-acts">
         <${Button} icon="plus" onClick=${() => setEdit('new')}>أضف منافسًا</${Button}>
         <${Button} variant="primary" icon="search" loading=${busy} disabled=${!count || !!analyzing} onClick=${analyze}>حلّل المنافسين الآن</${Button}></div>`}
     </div>
@@ -160,7 +160,7 @@ export function CompetitorsTab() {
       ? html`<div class="cp-rivals">${rows.map((r) => html`<${RivalCard} key=${r.id} r=${r} onEdit=${setEdit} onDeleted=${removed} />`)}</div>`
       : html`<div class="card"><${Empty} icon="users" title="لم تضف منافسين بعد"
           text="أضف منافسيك المباشرين وحساباتهم على المنصات، وسيحللهم مدير الحملات ويستخرج الفرص التي تتفوق بها عليهم."
-          action=${can('editor') && html`<${Button} variant="primary" icon="plus" onClick=${() => setEdit('new')}>أضف أول منافس</${Button}>`} /></div>`)}
+          action=${can('proposals') && html`<${Button} variant="primary" icon="plus" onClick=${() => setEdit('new')}>أضف أول منافس</${Button}>`} /></div>`)}
     </${Loader}>
     ${edit && html`<${RivalDrawer} key=${edit === 'new' ? 'new' : edit.id} rival=${edit === 'new' ? null : edit} onClose=${() => setEdit(null)} onSaved=${saved} />`}`;
 }

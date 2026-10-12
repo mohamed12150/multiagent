@@ -79,7 +79,7 @@ function Products({ items, onChange, errors }) {
 function BrandForm({ initial, onSaved }) {
   const f = useForm(initial);
   const d = f.draft;
-  const editable = can('manager');
+  const editable = can('settings');
   const submit = () => {
     if (!check(f, validate(d))) return;
     f.save(async () => {
@@ -160,6 +160,6 @@ export default function BrandTab() {
     session.set({ company: obj.name });
   };
   return html`<${Head} title="ملف العلامة" text="هويتك وصوتك ومنتجاتك في مكان واحد. هذا هو الموجز الذي يبني عليه كل وكيل عمله." />
-    ${!can('manager') && html`<${ReadOnly} />`}
+    ${!can('settings') && html`<${ReadOnly} cap="settings" />`}
     <${Loader} state=${st} skeleton=${html`<${BrandSkeleton} />`}>${() => html`<${BrandForm} initial=${initial} onSaved=${onSaved} />`}</${Loader}>`;
 }

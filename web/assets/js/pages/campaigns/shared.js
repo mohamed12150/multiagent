@@ -170,8 +170,9 @@ export const STATUS_ACTIONS = {
 
 export function StatusActions({ c, onDone, size = 'sm' }) {
   const [busy, setBusy] = useState('');
-  const acts = STATUS_ACTIONS[c.status] || [];
-  if (!can('manager') || !acts.length) return null;
+  // Launching an approved campaign is an approval in itself (server: needs «الاعتماد» too).
+  const acts = (STATUS_ACTIONS[c.status] || []).filter((a) => c.status !== 'approved' || can('approve'));
+  if (!can('campaigns') || !acts.length) return null;
   const run = async (a) => {
     if (a.confirm && !(await confirm(a.confirm(c)))) return;
     setBusy(a.to);
@@ -213,7 +214,7 @@ export async function rejectCampaign(c) {
 
 export function DecisionActions({ c, onDone, size = '' }) {
   const [busy, setBusy] = useState('');
-  if (!can('manager')) return html`<span class="tiny faint">الاعتماد للمدير أو المالك</span>`;
+  if (!can('approve')) return html`<span class="tiny faint">الاعتماد لمن يملك صلاحية «الاعتماد»</span>`;
   const run = async (kind) => {
     setBusy(kind);
     try {

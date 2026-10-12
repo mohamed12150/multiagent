@@ -1,7 +1,7 @@
 // الإعدادات › حسابي: the signed-in member's details and the change-password form.
 import { html, cls, useState } from '../../lib/h.js';
 import { api } from '../../lib/api.js';
-import { session, useStore } from '../../lib/store.js';
+import { capLabel, session, useStore } from '../../lib/store.js';
 import { date, dateTime } from '../../lib/format.js';
 import { Icon, Button, Badge, Card, KeyVal, Meter } from '../../ui/core.js';
 import { toast } from '../../ui/overlays.js';
@@ -74,14 +74,17 @@ export default function AccountTab() {
     <div class="st-account">
       <div class="card pad st-me">
         <div class="row gap-16"><span class="st-avatar lg">${initialOf(user.name)}</span>
-          <div class="grow"><h3>${user.name}</h3><p class="small muted ltr st-email">${user.email}</p>
+          <div class="grow"><h3>${user.name}</h3><p class="small muted ltr st-email">${user.username ? `@${user.username} · ` : ''}${user.email}</p>
             <div class="row gap-6 mt-8"><${Badge} tone="accent" icon=${user.role === 'owner' ? 'crown' : 'user'}>${role.label}</${Badge}></div></div></div>
         <p class="small muted mt-16">${role.text}</p>
         <div class="mt-16"><${KeyVal} items=${[
+          ['الصلاحيات', user.role === 'owner' ? 'كل الصلاحيات' : `${(user.caps || []).length} صلاحية`],
           ['آخر دخول', user.last_login_at ? dateTime(user.last_login_at) : 'هذه الجلسة'],
           ['عضو منذ', user.created_at ? date(user.created_at) : ''],
         ]} /></div>
-        ${user.role !== 'owner' && html`<p class="tiny faint mt-16">لتغيير اسمك أو بريدك تواصل مع مالك الحساب.</p>`}
+        ${user.role !== 'owner' && (user.caps || []).length > 0 && html`<div class="row wrap gap-6 mt-12">${user.caps.map((c) => html`
+          <${Badge} key=${c} tone="outline">${capLabel(c)}</${Badge}>`)}</div>`}
+        ${user.role !== 'owner' && html`<p class="tiny faint mt-16">لتغيير اسمك أو بريدك أو صلاحياتك تواصل مع مالك الحساب.</p>`}
       </div>
       <${Card} title="تغيير كلمة المرور" icon="lock"><${PasswordForm} email=${user.email} /></${Card}>
     </div>`;

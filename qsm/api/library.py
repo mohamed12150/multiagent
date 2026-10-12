@@ -14,7 +14,7 @@ from ..agents.runtime import enqueue
 from ..engine import approvals, media
 from ..models import Approval, Asset, Post, User
 from . import serial
-from .deps import ApiError, actor, editor, found, get_db, manager, ok, viewer
+from .deps import ApiError, actor, cap, found, get_db, ok, viewer
 
 router = APIRouter(tags=["library"])
 MAX_FILES = 20
@@ -46,7 +46,7 @@ def get_asset(asset_id: str, _: User = Depends(viewer), s: Session = Depends(get
 
 
 @router.post("/api/library")
-def upload(files: list[UploadFile] = File(...), folder: str = Form("عام"), user: User = Depends(editor),
+def upload(files: list[UploadFile] = File(...), folder: str = Form("عام"), user: User = Depends(cap("library")),
            s: Session = Depends(get_db, scope="function")) -> dict:
     if len(files) > MAX_FILES:
         raise ApiError(422, "too_many", f"ارفع {MAX_FILES} ملفًا كحد أقصى في المرة")
@@ -78,7 +78,7 @@ class AssetPatch(BaseModel):
 
 
 @router.patch("/api/library/{asset_id}")
-def update_asset(asset_id: str, body: AssetPatch, _: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def update_asset(asset_id: str, body: AssetPatch, _: User = Depends(cap("library")), s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Asset, asset_id), "الملف")
     if body.title is not None:
         a.title = body.title.strip() or a.title
@@ -110,7 +110,7 @@ def _resolve_asset(s: Session, approval: Approval, approved: bool) -> None:
 
 
 @router.post("/api/library/{asset_id}/review")
-def review(asset_id: str, body: ReviewIn, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def review(asset_id: str, body: ReviewIn, user: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Asset, asset_id), "الملف")
     pending = s.scalar(select(Approval).where(Approval.kind == "asset", Approval.ref_id == asset_id,
                                               Approval.status == "pending"))
@@ -122,7 +122,7 @@ def review(asset_id: str, body: ReviewIn, user: User = Depends(manager), s: Sess
 
 
 @router.delete("/api/library/{asset_id}")
-def delete_asset(asset_id: str, _: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def delete_asset(asset_id: str, _: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Asset, asset_id), "الملف")
     in_use = s.scalars(select(Post).where(Post.status.in_(("review", "approved", "scheduled", "publishing")))).all()
     if any(asset_id in (p.asset_ids or []) for p in in_use):

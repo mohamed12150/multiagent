@@ -194,7 +194,7 @@ function Hero({ r, onModal, onResent }) {
     <div class="rp-hero-acts">
       <${Button} size="sm" icon="mail" onClick=${() => onModal('email')}>معاينة البريد</${Button}>
       <${Button} size="sm" icon="whatsapp" onClick=${() => onModal('wa')}>نص واتساب</${Button}>
-      ${can('manager') && html`<${Button} size="sm" variant="primary" icon="send" loading=${busy} onClick=${resend}>أرسل مجددًا</${Button}>`}
+      ${can('reports') && html`<${Button} size="sm" variant="primary" icon="send" loading=${busy} onClick=${resend}>أرسل مجددًا</${Button}>`}
     </div>
   </section>`;
 }

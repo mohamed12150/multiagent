@@ -67,8 +67,8 @@ function Home({ query }) {
       <div class="grow"><h2>حملاتك ومقترحات مدير الحملات</h2>
         <p>تابع أداء كل حملة وميزانيتها، واعتمد المقترحات، وراقب المنافسين، واضبط الليمت من مكان واحد.</p></div>
       <div class="cp-acts">
-        ${can('editor') && html`<${Button} variant="primary" icon="wand" onClick=${openPropose}>اقترح حملة</${Button}>`}
-        ${can('manager') && html`<${Button} icon="plus" onClick=${openManual}>حملة يدوية</${Button}>`}
+        ${can('proposals') && html`<${Button} variant="primary" icon="wand" onClick=${openPropose}>اقترح حملة</${Button}>`}
+        ${can('campaigns') && html`<${Button} icon="plus" onClick=${openManual}>حملة يدوية</${Button}>`}
       </div>
     </div>
     <div class="cp-tabs"><${Tabs} tabs=${tabs} value=${tab} onChange=${go} /></div>

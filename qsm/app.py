@@ -16,7 +16,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import config, db, events, security
 from .agents.loader import load_all
 from .agents.runtime import runtime
-from .api import auth, campaigns, channels, content, hooks, inbox, library, network, reports, settings_api, system
+from .api import (auth, campaigns, channels, content, hooks, inbox, library, network, reports, settings_api, system,
+                  users)
 from .bodylimit import BodyLimit
 from .engine.scheduler import scheduler
 from .models import Agent, Post, Task
@@ -110,7 +111,8 @@ def create_app() -> FastAPI:
     app.add_middleware(BodyLimit, default=JSON_BODY_LIMIT,
                        overrides={"/api/library": cfg.max_upload_mb * 1024 * 1024 * UPLOAD_FILES})
 
-    for module in (auth, network, campaigns, content, library, channels, inbox, reports, system, settings_api, hooks):
+    for module in (auth, network, campaigns, content, library, channels, inbox, reports, system, settings_api, users,
+                   hooks):
         app.include_router(module.router)
 
     web = config.WEB_DIR

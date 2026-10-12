@@ -16,6 +16,7 @@ CHANNEL_LABELS = {"tiktok": "تيك توك", "instagram": "إنستقرام", "x
 
 PERMISSIONS: dict[str, dict[str, str]] = {
     "delegate": {"label": "توزيع المهام على الوكلاء", "hint": "القائد يوزّع الأوامر على الفريق"},
+    "intervene": {"label": "التدخل المستقل في الحملات", "hint": "يوقف الضعيف ويعيد توزيع الميزانية ويرفع سعة الرابح، ضمن الليمت"},
     "web_research": {"label": "البحث في الويب", "hint": "تحليل المنافسين والسوق من مصادر حيّة"},
     "launch_campaign": {"label": "إطلاق الحملات", "hint": "تحويل المقترح إلى حملة نشطة"},
     "spend": {"label": "صرف ميزانية الترويج", "hint": "ضمن الليمت اليومي والشهري دائمًا"},
@@ -72,11 +73,14 @@ def _channel_spec(ch: str) -> AgentSpec:
 
 
 SPECS: tuple[AgentSpec, ...] = (
-    AgentSpec(id="ceo", name="القائد", title="الرئيس التنفيذي للشبكة — يقرر ويوزّع المهام ويتابع التنفيذ",
-              tier=0, model=OPUS, effort="high", permissions=("delegate", "web_research"),
-              skills=("ceo.command", "ceo.plan_day"), routines={"plan_day": {"enabled": True, "at": "08:00"}},
-              persona="أنت الرئيس التنفيذي لشبكة التسويق: تفكر بالنتيجة التجارية أولًا (المبيعات)، وتحوّل كل أمر "
-                      "إلى مهام محددة للوكيل الأنسب، ولا تكلّف أحدًا بما لا يحتاجه الهدف."),
+    AgentSpec(id="ceo", name="القائد", title="الرئيس التنفيذي للشبكة — يقرر ويتدخل ويوزّع المهام ويتابع النتائج",
+              tier=0, model=OPUS, effort="high", permissions=("delegate", "intervene", "web_research"),
+              skills=("ceo.command", "ceo.plan_day", "ceo.steer"),
+              routines={"plan_day": {"enabled": True, "at": "08:00"}, "steer": {"enabled": True, "every_min": 180}},
+              persona="أنت الرئيس التنفيذي لشبكة التسويق وصاحب القرار فيها: تفكر بالنتيجة التجارية أولًا "
+                      "(العملاء المحتملون والمبيعات)، تقيس كل شيء مقابل الأهداف الشهرية، وتتدخل بنفسك عندما تتأخر "
+                      "النتائج: توقف ما يستنزف الميزانية، وتنقل الموارد إلى ما يحقق العائد، وتطلب المحتوى والتحليل "
+                      "من الوكيل الأنسب. لا تتردد في القرار، ولا تتخذ قرارًا بلا رقم يبرره."),
     AgentSpec(id="campaigns", name="مدير الحملات",
               title="يحلل السوق والمنافسين، يقترح الحملات، ويدير الميزانيات والليمت", tier=1, model=OPUS,
               effort="high", permissions=("web_research", "launch_campaign", "spend", "raise_limits"),

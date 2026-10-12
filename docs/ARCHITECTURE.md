@@ -24,7 +24,7 @@ children's outcomes.
 
 | Agent | Skills |
 |---|---|
-| ceo | `ceo.command`, `ceo.plan_day` |
+| ceo | `ceo.command`, `ceo.plan_day`, `ceo.steer` |
 | campaigns | `campaigns.propose`, `campaigns.analyze_competitors`, `campaigns.optimize` |
 | content | `content.create_post`, `content.revise`, `content.reply`, `content.send_reply`, `content.describe_asset` |
 | coordinator | `coordinator.distribute`, `coordinator.daily_report` |
@@ -41,6 +41,29 @@ must exist, counts clamped to the remaining room) before anything is written.
 autopilot). `approve` files an `Approval`; the owner decides in مكتب الاعتماد; a resolver registered per kind
 (`post`, `asset`, `reply`, `campaign`, `limit`, `fix`) carries the decision out (e.g. approved post → coordinator
 schedules it; post rejected with a note → content agent revises it).
+
+## القائد's steering (`agents/steer.py`)
+
+`ceo.steer` runs every 180 minutes inside the goals' review window (Settings › أهداف القائد). Code builds the picture
+(month-to-date progress against `goals`, active/paused campaigns with results, 7-day channel KPIs, leads and waiting
+conversations by channel, limits, pending approvals, recent decisions); Opus returns an assessment and up to six actions.
+Every action is untrusted until `steer.clean` re-validates it against the live state (types, finite numbers, ids that
+exist, campaign states, bounds) and records the `basis` it was decided on. `carry_out` splits by permission:
+changes (pause, resume an agent-paused campaign, shift budget, campaign posts, channel capacity) follow `intervene`
+(auto → applied now within `max_daily_interventions`; approve → one `plan` approval; off → noted only); delegated work
+(content, analysis, engagement, optimisation, proposals) follows `delegate`. Limit changes still pass
+`limits.request_raise(permission="intervene")`, so the raise step and ceiling apply; a budget shift lowers the source
+first and never to zero. An approved plan re-checks each action's basis and skips what changed meanwhile. Decisions are
+logged in the CEO's `insights.decisions` and shown on the network page. Owner commands may carry the same interventions;
+a member without the `campaigns` capability gets a plan instead of a change.
+
+## Team capabilities (`permissions.py`)
+
+Roles are presets; each member may carry a custom list of 14 capabilities, and every write route asks for one
+(`deps.cap`). `autonomy`, `notify` and `users` are granted by the owner only; nobody grants what they lack; members are
+compared on what their account carries even while deactivated; approvals of `limit`/`plan` need `autonomy` and `fix`
+needs `agents`, matching the screens that own those changes. Sign-in accepts email or username with one failure
+budget per account.
 
 ## Limits
 

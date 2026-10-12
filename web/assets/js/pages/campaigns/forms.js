@@ -5,6 +5,7 @@ import * as F from '../../lib/format.js';
 import { Icon, Button, Field, Toggle, ChannelMark, AgentMark } from '../../ui/core.js';
 import { Drawer, Modal, toast } from '../../ui/overlays.js';
 import { NumInput, addDays, daysBetween, daysText, isDay, todayIso } from './shared.js';
+import { can } from '../../lib/store.js';
 
 const IDEAS = ['الجمعة البيضاء', 'موسم الرياض', 'رفع المبيعات قبل نهاية الشهر', 'إطلاق منتج جديد', 'زيادة المتابعين على تيك توك'];
 
@@ -125,9 +126,9 @@ export function ManualDrawer({ onClose, onCreated }) {
         ${f.pillars.length > 0 && html`<div class="cp-pills mt-8">${f.pillars.map((p) => html`<span class="cp-pill" key=${p}>${p}
           <button type="button" aria-label=${`إزالة ${p}`} onClick=${() => setF((x) => ({ ...x, pillars: x.pillars.filter((y) => y !== p) }))}><${Icon} name="x" size="12" /></button></span>`)}</div>`}
         ${err.pillars ? html`<span class="error">${err.pillars}</span>` : html`<span class="help">الزوايا التي سيبني عليها صانع المحتوى منشورات الحملة.</span>`}</div>
-      <div class="well cp-launch"><div class="grow"><b class="small">أطلقها فورًا</b>
+      ${can('approve') && html`<div class="well cp-launch"><div class="grow"><b class="small">أطلقها فورًا</b>
         <p class="tiny muted">تنطلق الحملة الآن ويبدأ صانع المحتوى بتجهيز منشورات الانطلاق. وإلا تُحفظ معتمدة وتطلقها متى شئت.</p></div>
-        <${Toggle} checked=${f.launch} label="أطلقها فورًا" onChange=${set('launch')} /></div>
+        <${Toggle} checked=${f.launch} label="أطلقها فورًا" onChange=${set('launch')} /></div>`}
     </div>
   </${Drawer}>`;
 }

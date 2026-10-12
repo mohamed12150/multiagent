@@ -18,7 +18,7 @@ const uploader = (by) => (!by || by.startsWith('user:') ? 'أحد أعضاء ا�
 function StatusNotice({ asset: a }) {
   if (a.status === 'pending') {
     return html`<div class="notice warn"><${Icon} name="clock" size="18" /><div class="grow"><b>بانتظار «اعتماد التصميم»</b>
-      لن يستخدمه صانع المحتوى حتى يعتمده أحد المديرين.</div></div>`;
+      لن يستخدمه صانع المحتوى حتى يُعتمد من صاحب صلاحية الاعتماد.</div></div>`;
   }
   if (a.status === 'rejected') {
     return html`<div class="notice bad"><${Icon} name="xCircle" size="18" /><div class="grow"><b>مرفوض</b>
@@ -60,8 +60,8 @@ export function AssetDrawer({ asset, folders, onClose, onChanged, onDeleted }) {
   const [busy, setBusy] = useState('');
   const [blocked, setBlocked] = useState('');
   const dirty = !same(form, formOf(base));
-  const editor = can('editor');
-  const mgr = can('manager');
+  const editor = can('library');
+  const mgr = can('approve');
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   // Follow list refreshes (e.g. صانع المحتوى just described it) unless there are unsaved edits.

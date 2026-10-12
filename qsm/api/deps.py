@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from .. import db, security
+from .. import db, permissions, security
 from ..models import User
 
 
@@ -47,9 +47,22 @@ def role(minimum: str) -> Any:
     return dep
 
 
-viewer = role("viewer")
-editor = role("editor")
-manager = role("manager")
+viewer = role("viewer")  # any active account: reading the platform
+
+
+def cap(key: str) -> Any:
+    """Route gate by capability (see qsm.permissions); the owner always passes."""
+    if key not in permissions.ALL:
+        raise ValueError(f"unknown capability {key}")
+
+    def dep(user: User = Depends(current_user)) -> User:
+        if not permissions.has(user, key):
+            label = permissions.CAPABILITIES[key]["label"]
+            raise ApiError(403, "forbidden", f"لا تملك صلاحية «{label}»")
+        return user
+    return dep
+
+
 owner = role("owner")
 
 

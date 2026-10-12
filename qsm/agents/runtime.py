@@ -32,7 +32,8 @@ POLL_S = 1.0
 BACKOFF_S = 30
 TERMINAL = ("done", "failed", "cancelled")
 # Kinds whose result is worth a feed line (kinds that record their own richer event are left out).
-NOTABLE = {"channel.analyze", "campaigns.optimize", "campaigns.analyze_competitors", "ceo.plan_day", "guardian.apply_fix",
+NOTABLE = {"channel.analyze", "campaigns.optimize", "campaigns.analyze_competitors", "ceo.plan_day", "ceo.steer",
+           "guardian.apply_fix",
            "content.reply", "content.revise"}
 
 

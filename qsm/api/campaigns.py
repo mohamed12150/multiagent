@@ -8,13 +8,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import events, settings
+from .. import events, permissions, settings
 from ..agents.campaigns import OBJECTIVES, activate, campaign_results
 from ..agents.runtime import enqueue, task_dict
 from ..engine import approvals, limits
 from ..models import CHANNELS, Approval, Campaign, Competitor, LimitChange, Post, User
 from . import serial
-from .deps import ApiError, actor, ai_quota, editor, found, get_db, manager, ok, owner, viewer
+from .deps import ApiError, actor, ai_quota, cap, found, get_db, ok, viewer
 
 router = APIRouter(prefix="/api", tags=["campaigns"])
 
@@ -69,8 +69,10 @@ def _check(body: CampaignIn, s: Session) -> None:
 
 
 @router.post("/campaigns")
-def create_campaign(body: CampaignIn, user: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def create_campaign(body: CampaignIn, user: User = Depends(cap("campaigns")), s: Session = Depends(get_db, scope="function")) -> dict:
     _check(body, s)
+    if body.launch and not permissions.has(user, "approve"):
+        raise ApiError(403, "forbidden", "إطلاق الحملة مباشرة يحتاج صلاحية «الاعتماد» — احفظها دون إطلاق")
     c = Campaign(name=body.name, objective=body.objective, channels=body.channels, audience=body.audience,
                  offer=body.offer, budget_total=body.budget_total, daily_budget_cap=body.daily_budget_cap,
                  posts_per_day=body.posts_per_day, start_date=body.start_date, end_date=body.end_date,
@@ -89,7 +91,7 @@ class CampaignPatch(BaseModel):
     budget_total: float | None = Field(default=None, ge=0)
     daily_budget_cap: float | None = Field(default=None, ge=0)
     posts_per_day: int | None = Field(default=None, ge=1, le=50)
-    end_date: str | None = None
+    end_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     audience: str | None = Field(default=None, max_length=2000)
     offer: str | None = Field(default=None, max_length=2000)
 
@@ -99,16 +101,19 @@ TRANSITIONS = {"approved": {"active"}, "active": {"paused", "completed"}, "pause
 
 
 @router.patch("/campaigns/{campaign_id}")
-def update_campaign(campaign_id: str, body: CampaignPatch, user: User = Depends(manager),
+def update_campaign(campaign_id: str, body: CampaignPatch, user: User = Depends(cap("campaigns")),
                     s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Campaign, campaign_id), "الحملة")
     if body.status and body.status != c.status:
         if body.status not in TRANSITIONS.get(c.status, set()):
             raise ApiError(409, "bad_transition", "لا يمكن نقل الحملة إلى هذه الحالة")
         if body.status == "active" and c.status == "approved":
+            if not permissions.has(user, "approve"):
+                raise ApiError(403, "forbidden", "إطلاق الحملة يحتاج صلاحية «الاعتماد»")
             activate(s, c, by=actor(user))
         else:
             c.status = body.status
+        c.paused_by = actor(user) if body.status == "paused" else ""
         events.record(s, "campaign.status", f"الحملة «{c.name}» ← {body.status}", actor=actor(user),
                       ref_kind="campaign", ref_id=c.id)
     if body.daily_budget_cap is not None:
@@ -129,7 +134,7 @@ class DecideIn(BaseModel):
 
 
 @router.post("/campaigns/{campaign_id}/decide")
-def decide_campaign(campaign_id: str, body: DecideIn, user: User = Depends(manager),
+def decide_campaign(campaign_id: str, body: DecideIn, user: User = Depends(cap("approve")),
                     s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Campaign, campaign_id), "الحملة")
     pending = s.scalar(select(Approval).where(Approval.kind == "campaign", Approval.ref_id == campaign_id,
@@ -151,7 +156,7 @@ class ProposeIn(BaseModel):
 
 
 @router.post("/campaigns/propose")
-def propose(body: ProposeIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def propose(body: ProposeIn, user: User = Depends(cap("proposals")), s: Session = Depends(get_db, scope="function")) -> dict:
     ai_quota(user)
     t = enqueue(s, kind="campaigns.propose", title="اقتراح حملة" + (f": {body.focus[:80]}" if body.focus else ""),
                 input={"focus": body.focus}, created_by=actor(user), origin="user", priority=2)
@@ -173,7 +178,7 @@ def competitors(_: User = Depends(viewer), s: Session = Depends(get_db, scope="f
 
 
 @router.post("/competitors")
-def add_competitor(body: CompetitorIn, user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def add_competitor(body: CompetitorIn, user: User = Depends(cap("proposals")), s: Session = Depends(get_db, scope="function")) -> dict:
     handles = {k: v.strip()[:120] for k, v in body.handles.items() if k in CHANNELS and v.strip()}
     c = Competitor(name=body.name.strip(), website=body.website.strip(), handles=handles, notes=body.notes)
     s.add(c)
@@ -182,7 +187,7 @@ def add_competitor(body: CompetitorIn, user: User = Depends(editor), s: Session 
 
 
 @router.patch("/competitors/{cid}")
-def edit_competitor(cid: str, body: CompetitorIn, _: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def edit_competitor(cid: str, body: CompetitorIn, _: User = Depends(cap("proposals")), s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Competitor, cid), "المنافس")
     c.name, c.website, c.notes = body.name.strip(), body.website.strip(), body.notes
     c.handles = {k: v.strip()[:120] for k, v in body.handles.items() if k in CHANNELS and v.strip()}
@@ -190,13 +195,13 @@ def edit_competitor(cid: str, body: CompetitorIn, _: User = Depends(editor), s: 
 
 
 @router.delete("/competitors/{cid}")
-def delete_competitor(cid: str, _: User = Depends(manager), s: Session = Depends(get_db, scope="function")) -> dict:
+def delete_competitor(cid: str, _: User = Depends(cap("campaigns")), s: Session = Depends(get_db, scope="function")) -> dict:
     s.delete(found(s.get(Competitor, cid), "المنافس"))
     return ok()
 
 
 @router.post("/competitors/analyze")
-def analyze(user: User = Depends(editor), s: Session = Depends(get_db, scope="function")) -> dict:
+def analyze(user: User = Depends(cap("proposals")), s: Session = Depends(get_db, scope="function")) -> dict:
     ai_quota(user)
     t = enqueue(s, kind="campaigns.analyze_competitors", title="تحليل المنافسين", created_by=actor(user),
                 origin="user", priority=2)
@@ -211,7 +216,7 @@ def get_limits(_: User = Depends(viewer), s: Session = Depends(get_db, scope="fu
 
 
 @router.put("/limits")
-def put_limits(body: dict[str, Any], user: User = Depends(owner), s: Session = Depends(get_db, scope="function")) -> dict:
+def put_limits(body: dict[str, Any], user: User = Depends(cap("autonomy")), s: Session = Depends(get_db, scope="function")) -> dict:
     before = settings.get(s, "limits").model_dump(mode="json")
     try:
         after = settings.put(s, "limits", body, by=actor(user)).model_dump(mode="json")

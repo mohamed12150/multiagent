@@ -186,7 +186,20 @@ def test_linkedin_image_post(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert res.external_id == "urn:li:share:5" and res.url.endswith("urn:li:share:5")
     post = [k for m, u, k in rec.calls if u.endswith("/rest/posts")][0]
     assert post["json"]["content"]["media"]["id"] == "urn:li:image:9"
-    assert post["headers"]["LinkedIn-Version"] == "202509"
+    assert post["headers"]["LinkedIn-Version"] == linkedin.API_VERSION
+
+
+def test_retired_linkedin_version_falls_back_to_current() -> None:
+    from datetime import date
+
+    from qsm.connectors.linkedin import API_VERSION, api_version
+
+    today = date(2026, 10, 12)
+    assert api_version("202509", today) == API_VERSION  # retired before 202510
+    assert api_version("202510", today) == "202510"  # still served until 2026-10-15
+    assert api_version("202606", today) == "202606"
+    assert api_version("", today) == API_VERSION
+    assert api_version("2026-9", today) == API_VERSION
 
 
 def test_check_maps_http_errors() -> None:

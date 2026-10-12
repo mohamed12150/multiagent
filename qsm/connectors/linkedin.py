@@ -1,6 +1,7 @@
 """LinkedIn Posts API (versioned REST): text and image posts, social metadata, comments and replies."""
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 from urllib.parse import quote
 
@@ -20,6 +21,18 @@ P = "LinkedIn"
 REST = "https://api.linkedin.com/rest"
 
 
+# LinkedIn retires each monthly API version about 12 months after release (202510 stops on 2026-10-15).
+API_VERSION = "202609"
+
+
+def api_version(configured: str | None, today: date | None = None) -> str:
+    """The configured version while LinkedIn still serves it; a retired one falls back to the current release."""
+    day = today or date.today()
+    oldest_live = f"{day.year - 1}{day.month:02d}"
+    value = (configured or "").strip()
+    return value if len(value) == 6 and value.isdigit() and value >= oldest_live else API_VERSION
+
+
 class LinkedInConnector(Connector):
     provider = "linkedin"
     live = True
@@ -27,7 +40,7 @@ class LinkedInConnector(Connector):
     def _headers(self) -> dict[str, str]:
         need(self.cfg, "access_token", "author_urn")
         return {"Authorization": f"Bearer {self.cfg['access_token']}",
-                "LinkedIn-Version": self.cfg.get("api_version") or "202509",
+                "LinkedIn-Version": api_version(self.cfg.get("api_version")),
                 "X-Restli-Protocol-Version": "2.0.0"}
 
     @property

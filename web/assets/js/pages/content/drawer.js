@@ -31,9 +31,9 @@ function StatusNotices({ post: p, stale, onLatest }) {
       <span class="pre">${p.error || 'لم يكتمل النشر على القناة.'}</span></div></div>`}
     ${p.review_note && p.status !== 'failed' && html`<div class="notice warn"><${Icon} name=${p.status === 'approved' ? 'lightbulb' : 'alert'} size="18" />
       <div class="grow"><b>${NOTE_TITLE[p.status] || 'ملاحظة'}</b>${p.review_note}</div></div>`}
-    ${p.status === 'review' && !can('manager') && html`<div class="notice"><${Icon} name="info" size="18" />
-      <div class="grow">بانتظار اعتماد المدير. يمكنك تعديله حتى يُعتمد.</div></div>`}
-    ${p.status === 'scheduled' && !can('editor') && html`<div class="notice"><${Icon} name="calendar" size="18" />
+    ${p.status === 'review' && !can('approve') && html`<div class="notice"><${Icon} name="info" size="18" />
+      <div class="grow">بانتظار الاعتماد. يمكنك تعديله حتى يُعتمد.</div></div>`}
+    ${p.status === 'scheduled' && !can('content') && html`<div class="notice"><${Icon} name="calendar" size="18" />
       <div class="grow">مجدول للنشر ${p.scheduled_human} بتوقيت الرياض.</div></div>`}
     ${p.status === 'publishing' && html`<div class="notice"><span class="status-dot working" />
       <div class="grow">وكيل ${p.channel_label} ينشر هذا المنشور الآن.</div></div>`}
@@ -65,7 +65,7 @@ function SchedulePanel({ post: p, busy, onSchedule, onUnschedule, onPublish }) {
       <${Button} variant="primary" icon="calendar" loading=${busy === 'schedule'} disabled=${!at || !!busy}
         onClick=${() => onSchedule(at)}>${label}</${Button}>
       ${scheduled && html`<${Button} icon="x" loading=${busy === 'unschedule'} disabled=${!!busy} onClick=${onUnschedule}>ألغِ الجدولة</${Button}>`}
-      ${can('manager') && html`<${Button} icon="rocket" loading=${busy === 'publish'} disabled=${!!busy} onClick=${onPublish}>انشر الآن</${Button}>`}
+      ${can('approve') && html`<${Button} icon="rocket" loading=${busy === 'publish'} disabled=${!!busy} onClick=${onPublish}>انشر الآن</${Button}>`}
     </div>
   </section>`;
 }
@@ -79,7 +79,7 @@ function Metrics({ post: p }) {
 }
 
 function Details({ post: p }) {
-  const approver = p.approved_by ? (p.approved_by.startsWith('user:') ? 'أحد المديرين' : authorOf(p.approved_by).name) : '';
+  const approver = p.approved_by ? (p.approved_by.startsWith('user:') ? 'أحد أعضاء الفريق' : authorOf(p.approved_by).name) : '';
   return html`<section aria-label="التفاصيل"><h3>التفاصيل</h3><div class="mt-8"><${KeyVal} items=${[
     ['القناة', html`<span class="row gap-6"><${ChannelMark} ch=${p.channel} size="sm" />${p.channel_label} · ${F.formatLabel(p.format)}</span>`],
     ['كتبه', authorOf(p.author_agent).name],
@@ -94,8 +94,8 @@ function Details({ post: p }) {
 
 function Footer({ post: p, draft, dirty, editable, busy, act }) {
   const s = p.status;
-  const ed = can('editor');
-  const mgr = can('manager');
+  const ed = can('content');
+  const mgr = can('approve');
   const lacksMedia = NEEDS_MEDIA.has(p.channel) && !draft?.assets.length;
   const b = (key) => ({ loading: busy === key, disabled: !!busy && busy !== key });
   return html`
@@ -122,7 +122,7 @@ export function PostDrawer({ id, onClose, onChanged }) {
   const [busy, setBusy] = useState('');
   const dirty = !!(draft && base && !sameDraft(draft, draftOf(base)));
   const stale = dirty && !!post && post.version !== base.version;
-  const editable = !!post && can('editor') && EDITABLE.has(post.status);
+  const editable = !!post && can('content') && EDITABLE.has(post.status);
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
 
   // Adopt server changes (agent revisions, scheduling) unless the user has unsaved edits.
@@ -213,7 +213,7 @@ export function PostDrawer({ id, onClose, onChanged }) {
     <${Loader} state=${st} skeleton=${html`<${DrawerSkeleton} />`}>${(p) => html`<div class=${cls('col gap-20', busy && 'ct-busy')}>
       <${StatusNotices} post=${p} stale=${stale} onLatest=${latest} />
       ${p.status === 'published' && html`<${Metrics} post=${p} />`}
-      ${(p.status === 'approved' || p.status === 'scheduled') && can('editor') && html`<${SchedulePanel} post=${p} busy=${busy}
+      ${(p.status === 'approved' || p.status === 'scheduled') && can('content') && html`<${SchedulePanel} post=${p} busy=${busy}
         onSchedule=${act.schedule} onUnschedule=${act.unschedule} onPublish=${act.publishNow} />`}
       ${draft && html`<${PostEditor} draft=${draft} set=${set} editable=${editable} />`}
       <${Details} post=${p} />

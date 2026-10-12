@@ -264,8 +264,10 @@
 
 /* ---------- team ---------- */
 .st-users { padding: 6px 8px; }
-.st-urow { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(130px, 0.8fr) 70px minmax(100px, 0.7fr); gap: 12px;
+.st-urow { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(150px, 0.9fr) 70px minmax(100px, 0.7fr) 84px; gap: 12px;
   align-items: center; padding: 10px 12px; }
+.st-u-role { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.st-u-edit { display: flex; justify-content: flex-end; }
 .st-urow + .st-urow { border-top: 1px solid var(--line); }
 .st-uhead { padding-block: 8px; font-size: 12px; font-weight: 500; color: var(--text-3); }
 .st-urow.off .st-uwho { opacity: 0.6; }
@@ -281,6 +283,32 @@
 .st-role { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
 .st-role b { font-size: 13.5px; }
 .st-role p { font-size: 12.5px; color: var(--text-2); }
+.st-roles-note { margin: 4px 0 12px; max-width: 70ch; }
+
+/* member editor: identity fields, role preset, permission checklist */
+.st-member { display: flex; flex-direction: column; gap: 16px; }
+.st-member-role { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: end;
+  padding-top: 14px; border-top: 1px solid var(--line); }
+.st-member-sum { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 26px; font-size: 13px; color: var(--text-2); }
+.st-member-sum b { font-size: 18px; color: var(--text); font-variant-numeric: tabular-nums; }
+.st-caps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.st-capgroup { margin: 0; padding: 10px 12px 12px; border: 1px solid var(--line); border-radius: var(--r-ctl); min-width: 0; }
+.st-capgroup legend { padding: 0 6px; font-size: 12px; font-weight: 600; color: var(--text-3); }
+.st-cap { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; }
+.st-cap:hover { background: var(--surface-2); }
+.st-cap input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.st-cap:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.st-cap-box { display: grid; place-items: center; flex: none; width: 18px; height: 18px; margin-top: 2px; border: 1.5px solid var(--line-2);
+  border-radius: 5px; color: var(--on-accent); }
+.st-cap.on .st-cap-box { background: var(--accent); border-color: var(--accent); }
+.st-cap .grow { display: flex; flex-direction: column; gap: 2px; }
+.st-cap b { font-size: 13.5px; font-weight: 600; }
+.st-cap small { font-size: 12px; color: var(--text-3); line-height: 1.5; }
+.st-cap.locked { cursor: not-allowed; }
+.st-cap.locked input { cursor: not-allowed; }
+.st-cap.locked b { color: var(--text-2); }
+.btn.st-del { color: var(--bad-text); }
+.btn.st-del:hover { background: var(--bad-soft); }
 
 /* ---------- account ---------- */
 .st-account { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
@@ -346,9 +374,16 @@
   .st-urow-ai .st-usage-c { display: none; }
   .st-uhead { display: none; }
   .st-urow { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 12px 8px; }
+  .st-u-edit { grid-column: 1 / -1; justify-content: flex-start; }
+  .st-caps, .st-member-role { grid-template-columns: minmax(0, 1fr); }
+  .st-member-sum { padding-bottom: 0; }
   .st-uwho, .st-u-last { grid-column: 1 / -1; }
   .st-u-role::before, .st-u-active::before, .st-u-last::before { content: attr(data-label); display: block; margin-bottom: 4px;
     font-size: 11.5px; color: var(--text-3); }
   .st-u-last { display: flex; gap: 6px; align-items: baseline; }
   .st-u-last::before { display: inline; margin: 0; }
 }
+
+/* ---------- القائد's goals ---------- */
+.st-bullets { display: grid; gap: 4px; margin: 0; padding-inline-start: 18px; }
+.st-goal-note { margin: 16px 0; }
