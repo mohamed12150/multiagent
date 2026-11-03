@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from tests.conftest import H, OWNER
+from tests.conftest import OWNER, H
 from tests.test_ceo_steer import _campaign, _get
 from tests.test_users import PASS, _add, _login_as
 

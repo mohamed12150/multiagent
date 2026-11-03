@@ -45,7 +45,8 @@ DECIDE_CAP = {"limit": "autonomy", "plan": "autonomy", "fix": "agents"}
 
 
 @router.post("/approvals/{approval_id}/decide")
-def decide(approval_id: str, body: DecisionIn, user: User = Depends(cap("approve")), s: Session = Depends(get_db, scope="function")) -> dict:
+def decide(approval_id: str, body: DecisionIn, user: User = Depends(cap("approve")),
+           s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Approval, approval_id), "الطلب")
     need = DECIDE_CAP.get(a.kind)
     if need and not permissions.has(user, need):

@@ -127,7 +127,8 @@ class PostPatch(BaseModel):
 
 
 @router.patch("/{post_id}")
-def update_post(post_id: str, body: PostPatch, user: User = Depends(cap("content")), s: Session = Depends(get_db, scope="function")) -> dict:
+def update_post(post_id: str, body: PostPatch, user: User = Depends(cap("content")),
+                s: Session = Depends(get_db, scope="function")) -> dict:
     p = found(s.get(Post, post_id), "المنشور")
     if p.status not in EDITABLE:
         raise ApiError(409, "locked", "لا يمكن تعديل منشور قيد النشر أو منشور")

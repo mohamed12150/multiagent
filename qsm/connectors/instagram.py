@@ -4,6 +4,7 @@ Instagram pulls media from a public URL — Settings › عام › الرابط
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from datetime import datetime
 from typing import Any
 
@@ -90,10 +91,8 @@ class InstagramConnector(Connector):
         published = await self._post(f"{self.cfg['ig_user_id']}/media_publish", creation_id=creation)
         media_id = str(published.get("id", ""))
         link = ""
-        try:
+        with contextlib.suppress(ConnectorError):
             link = (await self._get(media_id, fields="permalink")).get("permalink", "")
-        except ConnectorError:
-            pass
         return PublishResult(external_id=media_id, url=link)
 
     async def metrics(self, external_ids: list[str]) -> dict[str, dict[str, int]]:

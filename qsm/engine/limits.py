@@ -209,10 +209,8 @@ def request_raise(s: Session, *, key: str, value: float, by: str, reason: str,
         within = value <= _ceiling(lim, key)
         if decision == "off":
             change.status = "rejected"
-        elif value <= old:  # lowering is always allowed: it only tightens spend
-            _apply(s, key, channel, value, by=by, campaign_id=campaign_id)
-            change.status = "applied"
-        elif decision == "auto" and auth.enabled and step_ok and within:
+        # lowering is always allowed: it only tightens spend
+        elif value <= old or (decision == "auto" and auth.enabled and step_ok and within):
             _apply(s, key, channel, value, by=by, campaign_id=campaign_id)
             change.status = "applied"
         else:

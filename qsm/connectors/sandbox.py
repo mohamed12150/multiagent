@@ -85,7 +85,7 @@ class SandboxConnector(Connector):
             return []
         out = []
         for _ in range(rnd.choice((1, 1, 2))):
-            category, text = rnd.choice(SAMPLES)
+            _category, text = rnd.choice(SAMPLES)
             name = rnd.choice(NAMES)
             kind = "whatsapp" if self.provider == "whatsapp" else rnd.choice(("comment", "comment", "dm"))
             phone = f"9665{rnd.randint(10000000, 99999999)}" if self.provider == "whatsapp" else ""

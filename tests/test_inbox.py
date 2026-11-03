@@ -135,7 +135,7 @@ def test_whatsapp_broadcast_only_reaches_opted_in(owner: TestClient, inbound, mo
     assert sent and sent[-1] == ("966500000003",)
 
 
-def test_risky_replies_are_held(env) -> None:  # noqa: ANN001
+def test_risky_replies_are_held(env) -> None:
     from qsm import settings
     from qsm.agents.community import risky
 
@@ -148,7 +148,7 @@ def test_risky_replies_are_held(env) -> None:  # noqa: ANN001
     assert "خصم" in risky("لك خصم 50%", brand)
 
 
-def test_injected_link_reply_waits_for_owner(owner: TestClient, inbound, monkeypatch) -> None:  # noqa: ANN001
+def test_injected_link_reply_waits_for_owner(owner: TestClient, inbound, monkeypatch) -> None:
     from qsm.agents import community
 
     monkeypatch.setattr(community, "simulated_reply", lambda c, n, b: {
@@ -163,7 +163,7 @@ def test_injected_link_reply_waits_for_owner(owner: TestClient, inbound, monkeyp
     assert appr["payload"]["held"] == "يحتوي رابطًا خارجيًا"
 
 
-def test_reply_guard_resists_lookalikes(env) -> None:  # noqa: ANN001
+def test_reply_guard_resists_lookalikes(env) -> None:
     from qsm import settings
     from qsm.agents.community import risky
 
@@ -175,7 +175,7 @@ def test_reply_guard_resists_lookalikes(env) -> None:  # noqa: ANN001
     assert risky("رقمنا 0500000000", brand) == ""
 
 
-def test_consent_keywords_are_exact(env) -> None:  # noqa: ANN001
+def test_consent_keywords_are_exact(env) -> None:
     from qsm.agents.channels import _consent_keyword
     from qsm.models import Contact
 

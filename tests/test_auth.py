@@ -53,7 +53,7 @@ def test_unknown_and_known_accounts_answer_alike(client: TestClient) -> None:
     assert a.status_code == b.status_code == 401 and a.json()["error"] == b.json()["error"]
 
 
-def test_production_setup_needs_the_token(env, monkeypatch) -> None:  # noqa: ANN001
+def test_production_setup_needs_the_token(env, monkeypatch) -> None:
     from qsm import config
 
     monkeypatch.setenv("QSM_ENV", "production")
@@ -70,12 +70,12 @@ def test_production_setup_needs_the_token(env, monkeypatch) -> None:  # noqa: AN
         assert "Strict-Transport-Security" in ok.headers
 
 
-def test_dev_mode_refuses_public_bind(env, monkeypatch) -> None:  # noqa: ANN001
+def test_dev_mode_refuses_public_bind(env, monkeypatch) -> None:
     import pytest
 
     from qsm import config
 
-    monkeypatch.setenv("QSM_HOST", "0.0.0.0")  # noqa: S104
+    monkeypatch.setenv("QSM_HOST", "0.0.0.0")
     with pytest.raises(config.ConfigError):
         config.load()
 

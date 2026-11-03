@@ -23,8 +23,8 @@ import anthropic
 from sqlalchemy import func, select
 
 from .. import db, settings, vault
-from ..engine import clock
 from ..agents.prompts import untrusted
+from ..engine import clock
 from ..models import Connection, UsageLog
 from . import models as ai_models
 

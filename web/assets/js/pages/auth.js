@@ -13,7 +13,7 @@ const DEMO_AGENTS = [
 ].map(([id, name, status]) => ({ id, name, status, enabled: true }));
 
 export function Auth({ setup }) {
-  const [f, setF] = useState({ name: '', company: '', email: '', login: '', password: '' });
+  const [f, setF] = useState({ name: '', company: '', email: '', login: '', password: '', setup_token: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
@@ -22,7 +22,10 @@ export function Auth({ setup }) {
     setBusy(true);
     setError('');
     try {
-      const body = setup ? { name: f.name, company: f.company, email: f.email, password: f.password }
+      const body = setup
+        // the token is typed or pasted by hand — strip anything but printable ASCII (hidden RTL marks break HMAC equality)
+        ? { name: f.name, company: f.company, email: f.email, password: f.password,
+            setup_token: f.setup_token.replace(/[^\x21-\x7e]/g, '') }
         : { login: f.login.trim(), password: f.password };
       const user = await api.post(setup ? '/auth/setup' : '/auth/login', body);
       const st = await api.get('/auth/state');
@@ -37,6 +40,8 @@ export function Auth({ setup }) {
       <form onSubmit=${submit}>
         ${setup && html`<${Field} label="اسمك"><input class="input" required minlength="2" value=${f.name} onInput=${set('name')} autocomplete="name" /></${Field}>
           <${Field} label="اسم الشركة"><input class="input" required minlength="2" value=${f.company} onInput=${set('company')} autocomplete="organization" /></${Field}>`}
+        ${setup && html`<${Field} label="رمز الإعداد" help="يطلبه خادم الإنتاج (QSM_SETUP_TOKEN) — يُترك فارغًا في التطوير">
+          <input class="input ltr" value=${f.setup_token} onInput=${set('setup_token')} autocomplete="off" autocapitalize="none" spellcheck="false" /></${Field}>`}
         ${setup
           ? html`<${Field} label="البريد الإلكتروني"><input class="input ltr" type="email" required value=${f.email} onInput=${set('email')} autocomplete="email" /></${Field}>`
           : html`<${Field} label="البريد أو اسم المستخدم"><input class="input ltr" required value=${f.login} onInput=${set('login')}

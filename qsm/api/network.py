@@ -109,7 +109,8 @@ def _clean_routines(current: dict[str, Any], incoming: dict[str, dict[str, Any]]
 
 
 @router.patch("/agents/{agent_id}")
-def update_agent(agent_id: str, body: AgentPatch, user: User = Depends(cap("agents")), s: Session = Depends(get_db, scope="function")) -> dict:
+def update_agent(agent_id: str, body: AgentPatch, user: User = Depends(cap("agents")),
+                 s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Agent, agent_id), "الوكيل")
     spec = BY_ID[agent_id]
     changes: list[str] = []

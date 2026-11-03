@@ -77,7 +77,8 @@ def email_html(report: Report, base_url: str = "") -> str:
 <h3 style="margin:22px 0 8px;font-size:15px;color:#202e3a">أداء القنوات</h3>
 <table style="width:100%;border-collapse:collapse;font-size:13px;color:#334155">
 <tr style="color:#64748b"><th style="text-align:right;padding:8px">القناة</th><th style="text-align:right;padding:8px">منشورات</th>
-<th style="text-align:right;padding:8px">وصول</th><th style="text-align:right;padding:8px">تفاعل</th><th style="text-align:right;padding:8px">المعدل</th></tr>{rows}</table>
+<th style="text-align:right;padding:8px">وصول</th><th style="text-align:right;padding:8px">تفاعل</th>
+<th style="text-align:right;padding:8px">المعدل</th></tr>{rows}</table>
 {_list("الإنجازات", sec.get("highlights", []), "#17a673")}
 {_list("تحتاج انتباهك", sec.get("issues", []), "#d98a1c")}
 {_list("التوصيات", sec.get("recommendations", []), "#6b6bf8")}

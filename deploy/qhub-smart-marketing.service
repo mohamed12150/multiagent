@@ -1,0 +1,25 @@
+# systemd — Qhub Smart Marketing (سيرفر QHub / Plesk)
+# يُنسخ إلى /etc/systemd/system/qhub-smart-marketing.service — سكربت setup-server.sh يتولى ذلك.
+[Unit]
+Description=Qhub Smart Marketing
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=qsm
+Group=qsm
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=/etc/qsm/qsm.env
+ExecStart=__APP_DIR__/.venv/bin/python run.py
+Restart=always
+RestartSec=3
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__DATA_DIR__
+
+[Install]
+WantedBy=multi-user.target

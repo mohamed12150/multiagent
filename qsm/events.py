@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import itertools
 import logging
 import threading
@@ -46,10 +47,8 @@ def _deliver(frame: dict[str, Any]) -> None:
         targets = list(_subscribers)
     for q in targets:
         if q.full():  # a stalled client loses its oldest frame, never blocks the network
-            try:
+            with contextlib.suppress(asyncio.QueueEmpty):
                 q.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
         q.put_nowait(frame)
 
 

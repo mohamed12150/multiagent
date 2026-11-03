@@ -61,7 +61,7 @@ def test_full_pipeline_to_published(owner: TestClient) -> None:
     post = owner.get(f"/api/posts/{post['id']}").json()["data"]
     assert post["status"] == "published" and post["sandbox"] is True
     assert owner.get(f"/api/library/{a['id']}/file").status_code == 200
-    asset = [x for x in owner.get("/api/library").json()["data"] if x["id"] == a["id"]][0]
+    asset = next(x for x in owner.get("/api/library").json()["data"] if x["id"] == a["id"])
     assert asset["used_count"] == 1
     owner.post("/api/agents/instagram/run", json={"kind": "channel.metrics"}, headers=H)
     run_tasks()
@@ -157,7 +157,7 @@ def test_editing_an_approved_post_needs_approval_again(owner: TestClient) -> Non
     assert owner.get("/api/approvals?kind=post").json()["data"][0]["ref_id"] == pid
 
 
-def test_optimizer_respects_raise_authority(owner: TestClient, monkeypatch) -> None:  # noqa: ANN001
+def test_optimizer_respects_raise_authority(owner: TestClient, monkeypatch) -> None:
     from qsm.agents import campaigns as camp_mod
 
     r = owner.post("/api/campaigns", json={"name": "اختبار", "channels": ["x"], "daily_budget_cap": 50,

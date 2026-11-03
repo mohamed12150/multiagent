@@ -3,6 +3,7 @@ task runtime (restarting it if it ever stops). The guardian in turn watches this
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import datetime, timedelta
 from typing import Any
@@ -32,7 +33,8 @@ ROUTINE_SKILLS: dict[tuple[str, str], str] = {
 }
 CHANNEL_ROUTINES = {"engage": "channel.engage", "metrics": "channel.metrics", "analyze": "channel.analyze"}
 TITLES = {"ceo.plan_day": "تخطيط محتوى اليوم", "ceo.steer": "مراجعة الأداء والتدخل",
-          "campaigns.optimize": "مراجعة الحملات والليمت", "campaigns.propose": "اقتراح حملات الأسبوع", "coordinator.distribute": "جدولة المحتوى المعتمد",
+          "campaigns.optimize": "مراجعة الحملات والليمت", "campaigns.propose": "اقتراح حملات الأسبوع",
+          "coordinator.distribute": "جدولة المحتوى المعتمد",
           "coordinator.daily_report": "تقرير الإنجاز اليومي", "guardian.sweep": "فحص النظام",
           "channel.engage": "متابعة التعليقات والرسائل", "channel.metrics": "تحديث المؤشرات",
           "channel.analyze": "تحليل الأداء", "channel.publish": "نشر المجدول"}
@@ -83,10 +85,8 @@ class Scheduler:
     async def stop(self) -> None:
         if self._task is not None:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._task
-            except (asyncio.CancelledError, Exception):
-                pass
         self._task = None
 
     async def restart(self) -> None:

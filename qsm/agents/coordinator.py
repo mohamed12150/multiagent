@@ -2,6 +2,7 @@
 the owner on WhatsApp and email."""
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime, time, timedelta
 from typing import Any
 
@@ -169,10 +170,8 @@ def simulate_report(data: dict[str, Any]) -> dict[str, Any]:
 async def daily_report(ctx: Ctx) -> dict[str, Any]:
     day = clock.today()
     if ctx.input.get("day"):
-        try:
+        with contextlib.suppress(ValueError):
             day = datetime.fromisoformat(str(ctx.input["day"])).date()
-        except ValueError:
-            pass
     with db.session() as s:
         data = gather(s, day)
         data["ai_cost_usd"] = round(ai.usage_summary(1)["cost_usd"], 4)

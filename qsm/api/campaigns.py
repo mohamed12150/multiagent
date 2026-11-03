@@ -187,7 +187,8 @@ def add_competitor(body: CompetitorIn, user: User = Depends(cap("proposals")), s
 
 
 @router.patch("/competitors/{cid}")
-def edit_competitor(cid: str, body: CompetitorIn, _: User = Depends(cap("proposals")), s: Session = Depends(get_db, scope="function")) -> dict:
+def edit_competitor(cid: str, body: CompetitorIn, _: User = Depends(cap("proposals")),
+                    s: Session = Depends(get_db, scope="function")) -> dict:
     c = found(s.get(Competitor, cid), "المنافس")
     c.name, c.website, c.notes = body.name.strip(), body.website.strip(), body.notes
     c.handles = {k: v.strip()[:120] for k, v in body.handles.items() if k in CHANNELS and v.strip()}

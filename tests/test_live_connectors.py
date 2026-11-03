@@ -155,9 +155,9 @@ def test_tiktok_file_upload_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     res = run(c.publish(OutboundPost(post_id="p", channel="tiktok", format="video", text="وصف",
                                      media=(media(tmp_path, "video", 1000),))))
     assert res.external_id == "777" and res.detail["privacy"] == "SELF_ONLY"
-    init = [k for m, u, k in rec.calls if "video/init" in u][0]["json"]
+    init = next(k for m, u, k in rec.calls if "video/init" in u)["json"]
     assert init["source_info"] == {"source": "FILE_UPLOAD", "video_size": 1000, "chunk_size": 1000, "total_chunk_count": 1}
-    put = [k for m, u, k in rec.calls if m == "PUT"][0]
+    put = next(k for m, u, k in rec.calls if m == "PUT")
     assert put["headers"]["Content-Range"] == "bytes 0-999/1000"
 
 
@@ -184,7 +184,7 @@ def test_linkedin_image_post(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     res = run(c.publish(OutboundPost(post_id="p", channel="linkedin", format="post", text="نص", title="عنوان",
                                      media=(media(tmp_path),))))
     assert res.external_id == "urn:li:share:5" and res.url.endswith("urn:li:share:5")
-    post = [k for m, u, k in rec.calls if u.endswith("/rest/posts")][0]
+    post = next(k for m, u, k in rec.calls if u.endswith("/rest/posts"))
     assert post["json"]["content"]["media"]["id"] == "urn:li:image:9"
     assert post["headers"]["LinkedIn-Version"] == linkedin.API_VERSION
 

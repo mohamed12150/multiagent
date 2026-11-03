@@ -78,7 +78,8 @@ class AssetPatch(BaseModel):
 
 
 @router.patch("/api/library/{asset_id}")
-def update_asset(asset_id: str, body: AssetPatch, _: User = Depends(cap("library")), s: Session = Depends(get_db, scope="function")) -> dict:
+def update_asset(asset_id: str, body: AssetPatch, _: User = Depends(cap("library")),
+                 s: Session = Depends(get_db, scope="function")) -> dict:
     a = found(s.get(Asset, asset_id), "الملف")
     if body.title is not None:
         a.title = body.title.strip() or a.title
